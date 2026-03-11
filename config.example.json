@@ -5,8 +5,9 @@
     "width": 1080,
     "height": 1920
   },
-  "accounts": {
-    "laodong": {
+  "accounts": [
+    {
+      "id": "laodong",
       "name": "程序员老东",
       "formats": ["dialogue", "slides", "ranking", "code", "narration", "article"],
       "theme": "dark",
@@ -46,7 +47,8 @@
         "keywords": ["AI", "大模型", "工具提效"]
       }
     },
-    "stock": {
+    {
+      "id": "stock",
       "name": "A股早知道",
       "formats": ["dialogue"],
       "theme": "warm",
@@ -85,5 +87,5 @@
         "keywords": ["A股", "港股", "美股", "行情"]
       }
     }
-  }
+  ]
 }

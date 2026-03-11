@@ -27,11 +27,12 @@ function findConfigPath(): string {
 interface RawCharacter {
   name: string;
   image: string;
-  size: [number, number];     // [width, height]
+  size: [number, number];         // [width, height]
   face: [number, number, number]; // [x, y, radius]
 }
 
 interface RawAccount {
+  id: string;
   name: string;
   formats?: string[];
   theme?: string;
@@ -43,7 +44,7 @@ interface RawAccount {
 interface RawConfig {
   version: number;
   video: { fps: number; width: number; height: number };
-  accounts: Record<string, RawAccount>;
+  accounts: RawAccount[];
 }
 
 function parseCharacter(raw: RawCharacter) {
@@ -61,11 +62,11 @@ function loadConfig(): { video: RawConfig["video"]; accounts: Record<string, Acc
   const raw: RawConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
   const result: Record<string, AccountConfig> = {};
 
-  for (const [id, acct] of Object.entries(raw.accounts)) {
-    result[id] = {
-      id,
+  for (const acct of raw.accounts) {
+    result[acct.id] = {
+      id: acct.id,
       name: acct.name,
-      outputDir: path.resolve(path.dirname(configPath), "output", id),
+      outputDir: path.resolve(path.dirname(configPath), "output", acct.id),
       leftCharacter: parseCharacter(acct.characters.left),
       rightCharacter: parseCharacter(acct.characters.right),
       backgroundImage: acct.background,

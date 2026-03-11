@@ -8,7 +8,7 @@ Config search order:
 
 Config schema v1:
   video: { fps, width, height }
-  accounts.{id}: { name, formats, theme, characters, background, tts, persona, hotspot }
+  accounts: [ { id, name, formats, theme, characters, background, tts, style, research } ]
   tts: { left, right, narrator }  (ChatTTS seed numbers)
 """
 
@@ -47,10 +47,15 @@ def load_config():
         return json.load(f)
 
 
+def _accounts_by_id():
+    """Build id -> account dict from accounts array."""
+    config = load_config()
+    return {acct["id"]: acct for acct in config.get("accounts", [])}
+
+
 def get_account(account_id):
     """Load account config. Returns (account_dict, data_dir, engine_dir)."""
-    config = load_config()
-    accounts = config.get("accounts", {})
+    accounts = _accounts_by_id()
     if account_id not in accounts:
         print(f"[error] Unknown account: {account_id}")
         print(f"  Available: {', '.join(accounts.keys())}")

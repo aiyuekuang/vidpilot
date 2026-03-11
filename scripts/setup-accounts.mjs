@@ -4,8 +4,9 @@
  * sync assets, and generate registry.ts in the skill engine.
  *
  * Config schema v1:
+ *   - accounts is an array: [{ id, name, ... }]
  *   - outputDir derived from account ID: output/{id}/
- *   - filenames use convention: {format}.ts (no explicit "files" mapping)
+ *   - filenames use convention: {format}.ts
  *   - character images in accounts/{id}/characters/
  *   - background images in accounts/{id}/backgrounds/
  *   - narration images in accounts/{id}/images/
@@ -37,10 +38,10 @@ if (!existsSync(configPath)) {
 }
 
 const config = JSON.parse(readFileSync(configPath, "utf-8"));
-const accounts = config.accounts || {};
-const accountIds = Object.keys(accounts).filter((id) => id !== "example");
+const accountList = config.accounts || [];
+const accounts = accountList.filter((a) => a.id !== "example");
 
-if (accountIds.length === 0) {
+if (accounts.length === 0) {
   console.log("[skip] No custom accounts in vidpilot.json.");
   process.exit(0);
 }
@@ -52,8 +53,8 @@ const ASSET_SUBDIRS = ["characters", "backgrounds", "images"];
 const FORMAT_FILENAME = (format) => `${format}.ts`;
 
 // Create directories for each account
-for (const id of accountIds) {
-  const acct = accounts[id];
+for (const acct of accounts) {
+  const id = acct.id;
 
   // Assets: {project}/accounts/{id}/ with subdirectories
   const assetsDir = join(PROJECT_DIR, "accounts", id);
@@ -72,7 +73,7 @@ for (const id of accountIds) {
     console.log(`[ok] Created: output/${id}/`);
   }
 
-  // Data: {skill}/engine/src/data/{id}/ — skill writes content here (Remotion needs this)
+  // Data: {skill}/engine/src/data/{id}/
   const dataDir = join(ENGINE_DATA, id);
   if (!existsSync(dataDir)) {
     mkdirSync(dataDir, { recursive: true });
@@ -149,8 +150,11 @@ const formatMeta = {
   narration: { imp: "segments, theme", var: "Segments",   theme: "NarrationTheme" },
 };
 
-for (const id of accountIds) {
-  const acct = accounts[id];
+const accountIds = [];
+
+for (const acct of accounts) {
+  const id = acct.id;
+  accountIds.push(id);
   const formats = acct.formats || [];
   const prefix = id.replace(/-/g, "_");
   const accountEntries = [];
