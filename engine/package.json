@@ -1,0 +1,22 @@
+{
+  "name": "vidpilot-engine",
+  "version": "1.0.0",
+  "description": "Remotion-based video rendering engine for vidpilot",
+  "private": true,
+  "scripts": {
+    "dev": "npx remotion studio src/index.ts",
+    "preview": "npx remotion preview src/index.ts"
+  },
+  "dependencies": {
+    "@remotion/bundler": "^4.0.432",
+    "@remotion/cli": "^4.0.432",
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "remotion": "^4.0.432"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "typescript": "^5.9.3"
+  }
+}
