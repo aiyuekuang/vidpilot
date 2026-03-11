@@ -27,27 +27,42 @@ if (accountIds.length === 0) {
   process.exit(0);
 }
 
-// 1. Create data directories for each account
+// Resolve outputDir: relative paths are relative to PROJECT_DIR
+function resolveOutputDir(outputDir) {
+  if (!outputDir) return null;
+  if (outputDir.startsWith("~/")) {
+    return join(process.env.HOME || "", outputDir.slice(2));
+  }
+  if (outputDir.startsWith("/")) return outputDir;
+  return join(PROJECT_DIR, outputDir);
+}
+
+// 1. Create directories for each account
 for (const id of accountIds) {
+  const acct = accounts[id];
+
+  // Data directory (for skill-generated content files)
   const dataDir = join(ENGINE_DATA, id);
   if (!existsSync(dataDir)) {
     mkdirSync(dataDir, { recursive: true });
-    console.log(`[ok] Created data directory: engine/src/data/${id}/`);
+    console.log(`[ok] Created: engine/src/data/${id}/`);
   }
 
-  // Create assets directory per account for user to drop images
-  const acct = accounts[id];
-  const chars = acct.characters || {};
-  const images = new Set();
-  if (chars.left?.image) images.add(chars.left.image);
-  if (chars.right?.image) images.add(chars.right.image);
-  if (acct.backgroundImage) images.add(acct.backgroundImage);
+  // Output directory (for archived videos)
+  const outputDir = resolveOutputDir(acct.outputDir);
+  if (outputDir && !existsSync(outputDir)) {
+    mkdirSync(outputDir, { recursive: true });
+    console.log(`[ok] Created: ${acct.outputDir}`);
+  }
 
-  // Check if images exist in engine/public/
+  // Check character images
+  const images = new Set();
+  if (acct.characters?.left?.image) images.add(acct.characters.left.image);
+  if (acct.characters?.right?.image) images.add(acct.characters.right.image);
+  if (acct.backgroundImage) images.add(acct.backgroundImage);
   for (const img of images) {
-    const imgPath = join(ENGINE_PUBLIC, img);
-    if (!existsSync(imgPath)) {
-      console.log(`[warn] Missing image: engine/public/${img} (account: ${id})`);
+    if (!existsSync(join(ENGINE_PUBLIC, img))) {
+      console.log(`[warn] Missing: engine/public/${img} (${id})`);
     }
   }
 }

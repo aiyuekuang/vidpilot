@@ -41,15 +41,17 @@ interface RawConfig {
   accounts: Record<string, RawAccount>;
 }
 
-function expandHome(p: string): string {
+function resolvePath(p: string, projectRoot: string): string {
   if (p.startsWith("~/")) {
     return path.join(process.env.HOME || "", p.slice(2));
   }
-  return p;
+  if (path.isAbsolute(p)) return p;
+  return path.resolve(projectRoot, p);
 }
 
 function loadConfig(): { global: RawConfig["global"]; accounts: Record<string, AccountConfig> } {
   const configPath = findConfigPath();
+  const projectRoot = path.dirname(configPath);
   const raw: RawConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
   const result: Record<string, AccountConfig> = {};
 
@@ -57,7 +59,7 @@ function loadConfig(): { global: RawConfig["global"]; accounts: Record<string, A
     result[id] = {
       id,
       name: acct.name,
-      outputDir: expandHome(acct.outputDir),
+      outputDir: resolvePath(acct.outputDir, projectRoot),
       leftCharacter: acct.characters.left,
       rightCharacter: acct.characters.right,
       backgroundImage: acct.backgroundImage,
