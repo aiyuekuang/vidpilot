@@ -7,4 +7,5 @@ out/
 config.json
 engine/src/data/*/
 !engine/src/data/example/
-!engine/src/data/registry.ts
+!engine/src/data/registry.example.ts
+engine/src/data/registry.ts

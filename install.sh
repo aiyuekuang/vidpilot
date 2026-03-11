@@ -15,7 +15,16 @@ else
   echo "[skip] Config already exists: $PROJECT_DIR/config.json"
 fi
 
-# 2. Install Remotion engine dependencies
+# 2. Copy registry template (don't overwrite existing)
+REGISTRY="$PROJECT_DIR/engine/src/data/registry.ts"
+if [ ! -f "$REGISTRY" ]; then
+  cp "$PROJECT_DIR/engine/src/data/registry.example.ts" "$REGISTRY"
+  echo "[ok] Created data registry: $REGISTRY"
+else
+  echo "[skip] Data registry already exists."
+fi
+
+# 3. Install Remotion engine dependencies
 echo ""
 echo "[step] Installing Remotion engine dependencies..."
 cd "$PROJECT_DIR/engine"
