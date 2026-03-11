@@ -3,14 +3,15 @@
  * Read config.json, create account directories, and generate registry.ts.
  * Run by install.sh or manually: node scripts/setup-accounts.mjs
  */
-import { readFileSync, writeFileSync, mkdirSync, existsSync, copyFileSync } from "fs";
-import { join, dirname } from "path";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, copyFileSync, readdirSync, symlinkSync, unlinkSync, lstatSync } from "fs";
+import { join, dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const PROJECT_DIR = join(__dirname, "..");
 const ENGINE_DATA = join(PROJECT_DIR, "engine", "src", "data");
 const ENGINE_PUBLIC = join(PROJECT_DIR, "engine", "public");
+const ACCOUNTS_DIR = join(PROJECT_DIR, "accounts");
 
 const configPath = join(PROJECT_DIR, "config.json");
 if (!existsSync(configPath)) {
@@ -41,28 +42,42 @@ function resolveOutputDir(outputDir) {
 for (const id of accountIds) {
   const acct = accounts[id];
 
-  // Data directory (for skill-generated content files)
+  // Assets directory: accounts/{id}/ — user drops images here
+  const assetsDir = join(ACCOUNTS_DIR, id);
+  if (!existsSync(assetsDir)) {
+    mkdirSync(assetsDir, { recursive: true });
+    console.log(`[ok] Created: accounts/${id}/`);
+  }
+
+  // Data directory: engine/src/data/{id}/ — skill writes content here
   const dataDir = join(ENGINE_DATA, id);
   if (!existsSync(dataDir)) {
     mkdirSync(dataDir, { recursive: true });
     console.log(`[ok] Created: engine/src/data/${id}/`);
   }
 
-  // Output directory (for archived videos)
+  // Output directory — archived videos
   const outputDir = resolveOutputDir(acct.outputDir);
   if (outputDir && !existsSync(outputDir)) {
     mkdirSync(outputDir, { recursive: true });
     console.log(`[ok] Created: ${acct.outputDir}`);
   }
 
-  // Check character images
-  const images = new Set();
-  if (acct.characters?.left?.image) images.add(acct.characters.left.image);
-  if (acct.characters?.right?.image) images.add(acct.characters.right.image);
-  if (acct.backgroundImage) images.add(acct.backgroundImage);
-  for (const img of images) {
-    if (!existsSync(join(ENGINE_PUBLIC, img))) {
-      console.log(`[warn] Missing: engine/public/${img} (${id})`);
+  // Sync images from accounts/{id}/ → engine/public/
+  // so Remotion's staticFile() can find them
+  const imageFiles = new Set();
+  if (acct.characters?.left?.image) imageFiles.add(acct.characters.left.image);
+  if (acct.characters?.right?.image) imageFiles.add(acct.characters.right.image);
+  if (acct.backgroundImage) imageFiles.add(acct.backgroundImage);
+
+  for (const img of imageFiles) {
+    const src = join(assetsDir, img);
+    const dest = join(ENGINE_PUBLIC, img);
+    if (existsSync(src) && !existsSync(dest)) {
+      copyFileSync(src, dest);
+      console.log(`[ok] Copied: accounts/${id}/${img} → engine/public/${img}`);
+    } else if (!existsSync(src) && !existsSync(dest)) {
+      console.log(`[warn] Missing: accounts/${id}/${img} — add your image here`);
     }
   }
 }
