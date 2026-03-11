@@ -3,17 +3,22 @@ import path from "path";
 import { AccountConfig, ThemeName } from "./types";
 
 // Config file search order:
-// 1. VIDPILOT_CONFIG env var
-// 2. ./config.json (project root, i.e. engine/../config.json)
+// 1. VIDPILOT_CONFIG env var (absolute path)
+// 2. VIDPILOT_PROJECT env var + /vidpilot.json
+// 3. CWD/vidpilot.json (project root)
 function findConfigPath(): string {
   if (process.env.VIDPILOT_CONFIG) {
     return process.env.VIDPILOT_CONFIG;
   }
-  const projectConfig = path.resolve(__dirname, "../../config.json");
-  if (fs.existsSync(projectConfig)) return projectConfig;
+  if (process.env.VIDPILOT_PROJECT) {
+    const p = path.join(process.env.VIDPILOT_PROJECT, "vidpilot.json");
+    if (fs.existsSync(p)) return p;
+  }
+  const cwdConfig = path.resolve(process.cwd(), "vidpilot.json");
+  if (fs.existsSync(cwdConfig)) return cwdConfig;
 
   throw new Error(
-    "config.json not found. Copy config.example.json to config.json and edit it."
+    "vidpilot.json not found in project directory. See config.example.json in the skill repo."
   );
 }
 

@@ -1,12 +1,9 @@
 node_modules/
 out/
-output/
-accounts/
 .venv/
 *.wav
 *.mp4
 .DS_Store
-config.json
 engine/src/data/*/
 !engine/src/data/example/
 !engine/src/data/registry.example.ts

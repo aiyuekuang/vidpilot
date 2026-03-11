@@ -9,41 +9,78 @@ Multi-account short video automation for Claude Code. Supports 5 video modes + a
 
 ---
 
-## Project Layout
+## Architecture: Skill vs Project
+
+VidPilot separates **skill** (code, reusable) from **project** (user data, unique per user).
 
 ```
-vidpilot/                          # This skill repo
-├── config.json                    # Account configs (gitignored, user-specific)
-├── config.example.json            # Template config
+~/.claude/skills/vidpilot/         # SKILL (git clone, shared code)
+├── SKILL.md
+├── config.example.json            # Template for users to copy
 ├── engine/                        # Remotion rendering engine
 │   ├── src/
 │   │   ├── Root.tsx               # Dynamic composition registration
-│   │   ├── accounts.ts            # Config-driven account loader
+│   │   ├── accounts.ts            # Reads vidpilot.json from project dir
 │   │   ├── types.ts               # All type definitions
 │   │   ├── components/            # 5 scene components
 │   │   └── data/
-│   │       ├── registry.ts        # Data file registry (auto-updated)
-│   │       └── {accountId}/       # Per-account data files
-│   └── public/                    # Assets (images, sfx)
+│   │       ├── example/           # Example data (git-tracked)
+│   │       ├── registry.ts        # Auto-generated (gitignored)
+│   │       └── {accountId}/       # Generated per account (gitignored)
+│   └── public/                    # Synced images + sfx
 ├── scripts/
-│   ├── config_loader.py           # Shared Python config reader
-│   ├── generate-audio-chattts.py  # Dialogue TTS
-│   ├── generate-audio-slides.py   # Slides TTS
-│   ├── generate-audio-ranking.py  # Ranking TTS
-│   ├── generate-audio-code.py     # Code demo TTS
-│   └── generate-audio-narration.py # Narration TTS
+│   ├── config_loader.py           # Reads vidpilot.json from project dir
+│   ├── setup-accounts.mjs         # Creates dirs + generates registry.ts
+│   ├── generate-audio-*.py        # TTS scripts
+│   └── ...
 └── install.sh
+
+~/Desktop/code/my-project/         # PROJECT (user data, not in skill repo)
+├── vidpilot.json                  # Account config
+├── accounts/
+│   ├── laodong/                   # Character images for account
+│   │   ├── char-韭菜.png
+│   │   ├── char-主力.png
+│   │   └── bg-today.png
+│   └── stock/
+│       └── ...
+└── output/
+    ├── 程序员老东/                 # Archived videos
+    │   └── 2025-03-11/
+    └── A股早知道/
+```
+
+**Config resolution order:**
+1. `VIDPILOT_CONFIG` env var (absolute path)
+2. `VIDPILOT_PROJECT` env var + `/vidpilot.json`
+3. `CWD/vidpilot.json` (run commands from project root)
+
+---
+
+## Quick Start
+
+```bash
+# 1. Clone skill
+git clone https://github.com/aiyuekuang/vidpilot.git ~/.claude/skills/vidpilot
+
+# 2. Init project (from your project directory)
+cd ~/Desktop/code/my-project
+~/.claude/skills/vidpilot/install.sh .
+
+# 3. Edit vidpilot.json, add images to accounts/{id}/
+
+# 4. Ask Claude to make a video!
 ```
 
 ---
 
 ## Account System
 
-All accounts are configured in `config.json`. The skill reads this file at runtime.
+All accounts are configured in `vidpilot.json` (in your **project** directory).
 
 **Step 0: Identify Account**
 
-Read `config.json` to get the account list. Match account by user intent:
+Read `vidpilot.json` to get the account list. Match account by user intent:
 - If unclear, list all accounts and ask user to choose.
 - Once confirmed, use `ACCOUNT={accountId}` for all subsequent commands.
 
@@ -52,7 +89,7 @@ Read `config.json` to get the account list. Match account by user intent:
 ## Output Directory
 
 ```
-{account.outputDir}/YYYY-MM-DD/
+{projectDir}/{account.outputDir}/YYYY-MM-DD/
 ```
 Stores: video files, scripts, README.md
 
@@ -62,7 +99,7 @@ Stores: video files, scripts, README.md
 
 ### Step 1: Collect Hot Topics
 
-Use WebSearch or custom scripts defined in `config.json` account's `hotspot` field.
+Use WebSearch or custom scripts defined in `vidpilot.json` account's `hotspot` field.
 
 ---
 
@@ -93,7 +130,7 @@ WebSearch for core data, hot discussions, different viewpoints on the topic.
 
 ### Step 4: Generate Script
 
-Write data files to `engine/src/data/{accountId}/`. Then update `engine/src/data/registry.ts` to import the new data.
+Write data files to `{skillDir}/engine/src/data/{accountId}/`. Then run `node scripts/setup-accounts.mjs {projectDir}` to regenerate registry.ts.
 
 **Data file conventions:**
 
@@ -105,7 +142,7 @@ Write data files to `engine/src/data/{accountId}/`. Then update `engine/src/data
 | code | `ai-code.ts` | `codeSteps`, `theme` | `../../types` |
 | narration | `ai-narration.ts` | `segments`, `theme` | `../../types` |
 
-**Character names come from config.json** (not hardcoded in data files).
+**Character names come from vidpilot.json** (not hardcoded in data files).
 
 #### 4A: Dialogue Script
 
@@ -156,16 +193,16 @@ GitHub is the primary verification source. Check each claim per format guideline
 ### Step 6: Generate Audio + Render Video
 
 ```bash
-VIDPILOT_DIR=~/.claude/skills/vidpilot  # or wherever installed
+VIDPILOT_DIR=~/.claude/skills/vidpilot
 cd $VIDPILOT_DIR
 source .venv/bin/activate
 
-# Generate TTS audio
-ACCOUNT={accountId} python scripts/generate-audio-{format}.py
+# Generate TTS audio (run from project dir or set VIDPILOT_PROJECT)
+VIDPILOT_PROJECT={projectDir} ACCOUNT={accountId} python scripts/generate-audio-{format}.py
 
-# Render video
+# Render video (run from project dir so accounts.ts finds vidpilot.json)
 cd engine
-npx remotion render {accountId}-{format} ../out/{accountId}-{format}.mp4 --codec h264
+VIDPILOT_PROJECT={projectDir} npx remotion render {accountId}-{format} ../out/{accountId}-{format}.mp4 --codec h264
 
 # Merge audio + video
 ffmpeg -y -i ../out/{accountId}-{format}.mp4 -i ../out/{audioFile} \
@@ -196,7 +233,7 @@ Generate 3 title candidates (15-20 chars, hook in first 5 chars).
 ### Step 8: Archive
 
 ```
-{account.outputDir}/YYYY-MM-DD/
+{projectDir}/{account.outputDir}/YYYY-MM-DD/
   ├── [video-title].mp4
   ├── [data-file].ts
   └── README.md
@@ -206,13 +243,17 @@ Generate 3 title candidates (15-20 chars, hook in first 5 chars).
 
 ## Data Registry Update
 
-After writing data files, update `engine/src/data/registry.ts`:
+After writing data files, regenerate registry by running:
+
+```bash
+node scripts/setup-accounts.mjs {projectDir}
+```
+
+Or manually update `engine/src/data/registry.ts`:
 
 ```typescript
-// Add import for the new account data
 import { dialogue as myDialogue } from "./{accountId}/ai-dialogue";
 
-// Add to registry object
 export const registry = {
   // ... existing entries ...
   {accountId}: {
@@ -231,4 +272,7 @@ export const registry = {
 - Each account's data files in: `engine/src/data/{accountId}/`
 - Composition IDs: `{accountId}-{format}`
 - TTS routing: `ACCOUNT={accountId}` env var
+- Config file: `vidpilot.json` in **project** directory (not skill directory)
+- Assets: `accounts/{id}/` in **project** directory
+- Output: `output/{name}/` in **project** directory
 - Never mix data between accounts
