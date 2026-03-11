@@ -13,6 +13,7 @@ from utils.base_social_media import get_supported_social_media, get_cli_action, 
     SOCIAL_MEDIA_TENCENT, SOCIAL_MEDIA_TIKTOK, SOCIAL_MEDIA_KUAISHOU
 from utils.constant import TencentZoneTypes
 from utils.files_times import get_title_and_hashtags
+from utils.thumbnail import generate_thumbnail
 
 
 def parse_schedule(schedule_raw):
@@ -70,6 +71,11 @@ async def main():
         title, tags = get_title_and_hashtags(args.video_file)
         video_file = args.video_file
 
+        # Auto-generate thumbnail
+        thumbnail_path = video_file.replace(".mp4", "_cover.png")
+        subtitle = " ".join(f"#{t}" for t in tags[:3]) if tags else None
+        generate_thumbnail(title, thumbnail_path, subtitle=subtitle)
+
         if args.publish_type == 0:
             print("Uploading immediately...")
             publish_date = 0
@@ -79,7 +85,7 @@ async def main():
 
         if args.platform == SOCIAL_MEDIA_DOUYIN:
             await douyin_setup(account_file, handle=False)
-            app = DouYinVideo(title, video_file, tags, publish_date, account_file)
+            app = DouYinVideo(title, video_file, tags, publish_date, account_file, thumbnail_path=thumbnail_path)
         elif args.platform == SOCIAL_MEDIA_TIKTOK:
             await tiktok_setup(account_file, handle=True)
             app = TiktokVideo(title, video_file, tags, publish_date, account_file)

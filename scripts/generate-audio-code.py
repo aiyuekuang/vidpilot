@@ -186,7 +186,7 @@ def main():
     update_durations_in_ts(DATA_FILE, clip_durations)
     print("[done] duration 已更新")
 
-    print(f"\n[next] 运行: npx remotion render AICodeAnimation out/ai-code.mp4")
+    print(f"\n[next] 运行: cd engine && VIDPILOT_PROJECT=$PWD npx remotion render {ACCOUNT_ID}-code ../out/{ACCOUNT_ID}-code.mp4 --codec h264")
 
 
 if __name__ == "__main__":

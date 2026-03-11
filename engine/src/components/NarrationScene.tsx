@@ -78,13 +78,10 @@ const SingleSegment: React.FC<SingleSegmentProps> = ({
     imgTransform = `scale(${scale})`;
   }
 
-  // 文字逐字显示
-  const textChars = segment.text.split("");
-  const charsPerFrame = textChars.length / Math.max(segment.duration * 0.3, 10);
-  const visibleChars = Math.min(
-    textChars.length,
-    Math.floor(localFrame * charsPerFrame)
-  );
+  // 文字整句淡入显示
+  const textOpacity = interpolate(localFrame, [0, 20], [0, 1], {
+    extrapolateRight: "clamp",
+  });
 
   return (
     <div
@@ -149,32 +146,20 @@ const SingleSegment: React.FC<SingleSegmentProps> = ({
         {/* 主文字 */}
         <div
           style={{
-            fontSize: fs * (segment.image ? 36 : 44),
+            fontSize: fs * (segment.image ? 48 : 56),
             fontWeight: 800,
             color: theme.title,
             fontFamily,
             lineHeight: 1.5,
             textShadow: segment.image ? "0 2px 20px rgba(0,0,0,0.8)" : "none",
+            opacity: textOpacity,
           }}
         >
-          {textChars.slice(0, visibleChars).join("")}
-          {visibleChars < textChars.length && (
-            <span
-              style={{
-                display: "inline-block",
-                width: 3,
-                height: fs * 36,
-                background: theme.accent,
-                marginLeft: 2,
-                verticalAlign: "middle",
-                opacity: Math.sin(localFrame * 0.3) > 0 ? 1 : 0,
-              }}
-            />
-          )}
+          {segment.text}
         </div>
 
         {/* 副标题/来源 */}
-        {segment.subtitle && visibleChars >= textChars.length && (
+        {segment.subtitle && (
           <div
             style={{
               fontSize: fs * 20,
@@ -182,7 +167,7 @@ const SingleSegment: React.FC<SingleSegmentProps> = ({
               fontFamily,
               opacity: interpolate(
                 localFrame,
-                [segment.duration * 0.4, segment.duration * 0.5],
+                [15, 30],
                 [0, 1],
                 { extrapolateRight: "clamp", extrapolateLeft: "clamp" }
               ),
@@ -216,6 +201,7 @@ export const NarrationScene: React.FC<NarrationProps> = ({
   segments = [],
   theme: themeName = "dark",
   title,
+  bgm,
 }) => {
   if (segments.length === 0) return null;
   const frame = useCurrentFrame();
@@ -257,6 +243,11 @@ export const NarrationScene: React.FC<NarrationProps> = ({
           <Audio src={staticFile("sfx/ding.wav")} volume={0.15} />
         </Sequence>
       ))}
+
+      {/* 背景音乐 */}
+      {bgm && (
+        <Audio src={staticFile(`music/${bgm}`)} volume={0.08} loop />
+      )}
 
       {/* 顶部水印 */}
       {title && (

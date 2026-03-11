@@ -87,18 +87,20 @@ def normalize_text(text):
 def parse_data_ts(filepath):
     with open(filepath, "r", encoding="utf-8") as f:
         content = f.read()
-    match = re.search(r"export const \w+NarrationSegments.*?=\s*\[(.*?)\];", content, re.DOTALL)
+    match = re.search(r"export const \w+.*?:\s*NarrationSegment\[\]\s*=\s*\[(.*?)\];", content, re.DOTALL)
     if not match:
-        raise ValueError(f"找不到 NarrationSegments 数据 in {filepath}")
+        raise ValueError(f"找不到 NarrationSegment[] 数据 in {filepath}")
     segments = []
-    for obj_match in re.finditer(
-        r'narration:\s*"([^"]*)"[^}]*?duration:\s*(\d+)',
-        match.group(1), re.DOTALL,
-    ):
-        segments.append({
-            "narration": obj_match.group(1),
-            "duration": int(obj_match.group(2)),
-        })
+    # Match each { ... } block
+    for block in re.finditer(r'\{([^}]+)\}', match.group(1), re.DOTALL):
+        block_text = block.group(1)
+        narr = re.search(r'narration:\s*"([^"]*)"', block_text)
+        dur = re.search(r'duration:\s*(\d+)', block_text)
+        if narr and dur:
+            segments.append({
+                "narration": narr.group(1),
+                "duration": int(dur.group(1)),
+            })
     return segments
 
 
@@ -153,9 +155,10 @@ def main():
         clip_path = os.path.join(clips_dir, f"narr_{i:03d}.wav")
         params_infer = ChatTTS.Chat.InferCodeParams(
             spk_emb=narrator_spk, temperature=0.3, top_P=0.6, top_K=20,
+            prompt="[speed_7]",
         )
         params_refine = ChatTTS.Chat.RefineTextParams(
-            prompt="[oral_2][laugh_0][break_4]",
+            prompt="[oral_1][laugh_0][break_2]",
         )
         text = normalize_text(seg["narration"])
         wavs = chat.infer([text], params_infer_code=params_infer, params_refine_text=params_refine)
@@ -186,7 +189,7 @@ def main():
     update_durations_in_ts(DATA_FILE, clip_durations)
     print("[done] duration 已更新")
 
-    print(f"\n[next] 运行: npx remotion render AINarrationAnimation out/ai-narration.mp4")
+    print(f"\n[next] 运行: cd engine && VIDPILOT_PROJECT=$PWD npx remotion render {ACCOUNT_ID}-narration ../out/{ACCOUNT_ID}-narration.mp4 --codec h264")
 
 
 if __name__ == "__main__":

@@ -126,6 +126,7 @@ export interface NarrationProps {
   segments?: NarrationSegment[];
   theme?: "dark" | "tech" | "warm";
   title?: string;
+  bgm?: string;  // BGM filename in public/music/ (e.g., "tech-ambient.wav")
 }
 
 // ── 账号配置 ─────────────────────────────────────────────────

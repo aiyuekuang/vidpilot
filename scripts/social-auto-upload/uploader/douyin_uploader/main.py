@@ -18,7 +18,7 @@ async def cookie_auth(account_file):
         # 创建一个新的页面
         page = await context.new_page()
         # 访问指定的 URL
-        await page.goto("https://creator.douyin.com/creator-micro/content/upload")
+        await page.goto("https://creator.douyin.com/creator-micro/content/upload", timeout=60000, wait_until="domcontentloaded")
         try:
             await page.wait_for_url("https://creator.douyin.com/creator-micro/content/upload", timeout=5000)
         except:
@@ -110,7 +110,7 @@ class DouYinVideo(object):
         # 创建一个新的页面
         page = await context.new_page()
         # 访问指定的 URL
-        await page.goto("https://creator.douyin.com/creator-micro/content/upload")
+        await page.goto("https://creator.douyin.com/creator-micro/content/upload", timeout=60000, wait_until="domcontentloaded")
         douyin_logger.info(f'[+]正在上传-------{self.title}.mp4')
         # 等待页面跳转到指定的 URL，没进入，则自动等待到超时
         douyin_logger.info(f'[-] 正在打开主页...')
@@ -223,8 +223,7 @@ class DouYinVideo(object):
                 # 尝试处理封面问题
                 await self.handle_auto_video_cover(page)
                 douyin_logger.info("  [-] 视频正在发布中...")
-                await page.screenshot(full_page=True)
-                await asyncio.sleep(0.5)
+                await asyncio.sleep(2)
 
         await context.storage_state(path=self.account_file)  # 保存cookie
         douyin_logger.success('  [-]cookie更新完毕！')

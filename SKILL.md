@@ -305,11 +305,11 @@ Write data files to `{skillDir}/engine/src/data/{accountId}/`. Then run `node sc
 
 | Format | Filename | Exports | Import types from |
 |--------|----------|---------|-------------------|
-| dialogue | `ai-dialogue.ts` | `dialogue` | `../../types` |
-| slides | `ai-slides.ts` | `slides`, `theme` | `../../types` |
-| ranking | `ai-ranking.ts` | `rankSlides`, `theme` | `../../types` |
-| code | `ai-code.ts` | `codeSteps`, `theme` | `../../types` |
-| narration | `ai-narration.ts` | `segments`, `theme` | `../../types` |
+| dialogue | `dialogue.ts` | `dialogue` | `../../types` |
+| slides | `slides.ts` | `slides`, `theme` | `../../types` |
+| ranking | `ranking.ts` | `rankSlides`, `theme` | `../../types` |
+| code | `code.ts` | `codeSteps`, `theme` | `../../types` |
+| narration | `narration.ts` | `segments`, `theme` | `../../types` |
 
 **Character names come from vidpilot.json** (not hardcoded in data files).
 
@@ -417,11 +417,15 @@ Generate 3 title candidates (15-20 chars, hook in first 5 chars).
 
 ### Step 8: Archive
 
+Each video gets its own subdirectory under the date folder, named by video title:
+
 ```
 {projectDir}/output/{accountId}/YYYY-MM-DD/
-  ├── [video-title].mp4
-  ├── [data-file].ts
-  └── README.md
+  └── [video-title]/
+      ├── [video-title].mp4
+      ├── [video-title]_cover.png
+      ├── [data-file].ts
+      └── meta.txt          # title, tags, description
 ```
 
 ---
@@ -437,7 +441,7 @@ node scripts/setup-accounts.mjs {projectDir}
 Or manually update `engine/src/data/registry.ts`:
 
 ```typescript
-import { dialogue as myDialogue } from "./{accountId}/ai-dialogue";
+import { dialogue as myDialogue } from "./{accountId}/dialogue";
 
 export const registry = {
   // ... existing entries ...

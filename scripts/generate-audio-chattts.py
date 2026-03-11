@@ -137,7 +137,7 @@ def parse_dialogue_ts(filepath):
     with open(filepath, "r", encoding="utf-8") as f:
         content = f.read()
     match = re.search(
-        r"export const \w+Dialogue.*?=\s*\[(.*?)\];",
+        r"export const \w+.*?:\s*DialogueLine\[\]\s*=\s*\[(.*?)\];",
         content, re.DOTALL,
     )
     if not match:
@@ -387,7 +387,7 @@ def main():
 
     dur = get_audio_duration(output_path)
     print(f"\n[done] 音轨: {output_path} ({dur:.1f}秒)")
-    print(f"[next] 运行 npm run build 渲染视频")
+    print(f"\n[next] 运行: cd engine && VIDPILOT_PROJECT=$PWD npx remotion render {ACCOUNT_ID}-dialogue ../out/{ACCOUNT_ID}-dialogue.mp4 --codec h264")
 
 
 if __name__ == "__main__":
