@@ -4,21 +4,16 @@ import { AccountConfig, ThemeName } from "./types";
 
 // Config file search order:
 // 1. VIDPILOT_CONFIG env var
-// 2. ~/.vidpilot/config.json
-// 3. ./config.json (relative to engine root)
+// 2. ./config.json (project root, i.e. engine/../config.json)
 function findConfigPath(): string {
   if (process.env.VIDPILOT_CONFIG) {
     return process.env.VIDPILOT_CONFIG;
   }
-  const home = process.env.HOME || process.env.USERPROFILE || "";
-  const dotfileConfig = path.join(home, ".vidpilot", "config.json");
-  if (fs.existsSync(dotfileConfig)) return dotfileConfig;
-
   const projectConfig = path.resolve(__dirname, "../../config.json");
   if (fs.existsSync(projectConfig)) return projectConfig;
 
   throw new Error(
-    "vidpilot config not found. Create ~/.vidpilot/config.json or set VIDPILOT_CONFIG env var."
+    "config.json not found. Copy config.example.json to config.json and edit it."
   );
 }
 

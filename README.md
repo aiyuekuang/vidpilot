@@ -20,12 +20,12 @@ Plus **article** format for long-form text content.
 
 ```bash
 # 1. Clone and install
-git clone https://github.com/aiyuekuang/vidpilot.git ~/.claude/skills/vidpilot
-cd ~/.claude/skills/vidpilot
+git clone https://github.com/aiyuekuang/vidpilot.git
+cd vidpilot
 bash install.sh
 
-# 2. Edit config
-vim ~/.vidpilot/config.json
+# 2. Edit config (install.sh auto-creates from template)
+vim config.json
 
 # 3. Preview in browser
 cd engine && npx remotion studio src/index.ts

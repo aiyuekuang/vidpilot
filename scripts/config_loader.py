@@ -3,8 +3,7 @@ Shared config loader for vidpilot TTS scripts.
 
 Config search order:
 1. VIDPILOT_CONFIG env var
-2. ~/.vidpilot/config.json
-3. ../config.json (relative to scripts/)
+2. ../config.json (project root, relative to scripts/)
 """
 
 import json
@@ -18,14 +17,10 @@ PROJECT_DIR = os.path.dirname(SCRIPT_DIR)
 def find_config_path():
     if os.environ.get("VIDPILOT_CONFIG"):
         return os.environ["VIDPILOT_CONFIG"]
-    home = os.path.expanduser("~")
-    dotfile = os.path.join(home, ".vidpilot", "config.json")
-    if os.path.exists(dotfile):
-        return dotfile
     project = os.path.join(PROJECT_DIR, "config.json")
     if os.path.exists(project):
         return project
-    print("[error] config.json not found. Run install.sh or set VIDPILOT_CONFIG.")
+    print("[error] config.json not found. Copy config.example.json to config.json and edit it.")
     sys.exit(1)
 
 
