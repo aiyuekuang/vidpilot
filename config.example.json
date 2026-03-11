@@ -12,20 +12,20 @@
       "characters": {
         "left": {
           "name": "小李",
-          "image": "char-韭菜.png",
+          "image": "left.png",
           "imageWidth": 533,
           "imageHeight": 800,
           "faceCenter": { "x": 208, "y": 280, "radius": 160 }
         },
         "right": {
           "name": "老王",
-          "image": "char-主力.png",
+          "image": "right.png",
           "imageWidth": 676,
           "imageHeight": 800,
           "faceCenter": { "x": 350, "y": 250, "radius": 130 }
         }
       },
-      "backgroundImage": "bg-today.png",
+      "backgroundImage": "bg.png",
       "defaultTheme": "dark",
       "voiceSeeds": {
         "left": 42,
@@ -61,20 +61,20 @@
       "characters": {
         "left": {
           "name": "小韭",
-          "image": "char-韭菜.png",
+          "image": "left.png",
           "imageWidth": 533,
           "imageHeight": 800,
           "faceCenter": { "x": 208, "y": 280, "radius": 160 }
         },
         "right": {
           "name": "老张",
-          "image": "char-主力.png",
+          "image": "right.png",
           "imageWidth": 676,
           "imageHeight": 800,
           "faceCenter": { "x": 350, "y": 250, "radius": 130 }
         }
       },
-      "backgroundImage": "bg-today.png",
+      "backgroundImage": "bg.png",
       "defaultTheme": "warm",
       "voiceSeeds": {
         "left": 42,

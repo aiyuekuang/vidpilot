@@ -208,7 +208,7 @@ If the user says "add a new account" or "create another channel":
 VidPilot separates **skill** (code, reusable) from **project** (user data, unique per user).
 
 ```
-~/.claude/skills/vidpilot/         # SKILL (git clone, shared code)
+{project}/.claude/skills/vidpilot/  # SKILL (git clone, project-level)
 ├── SKILL.md
 ├── config.example.json            # Template for users to copy
 ├── engine/                        # Remotion rendering engine
@@ -227,7 +227,7 @@ VidPilot separates **skill** (code, reusable) from **project** (user data, uniqu
 │   ├── setup-accounts.mjs         # Creates dirs + generates registry.ts
 │   ├── generate-audio-*.py        # TTS scripts
 │   └── ...
-└── install.sh
+└── install.mjs
 
 {CWD}/                             # PROJECT (user data, not in skill repo)
 ├── vidpilot.json                  # Account config (user creates/edits)
@@ -362,29 +362,33 @@ GitHub is the primary verification source. Check each claim per format guideline
 
 Before rendering, sync assets from project to skill engine:
 
-```bash
+```
 node {skillDir}/scripts/setup-accounts.mjs {projectDir}
 ```
 
-Then generate audio and render:
+Then generate audio and render. The `{skillDir}` is the skill's install location (e.g., `{projectDir}/.claude/skills/vidpilot`).
 
-```bash
-VIDPILOT_DIR=~/.claude/skills/vidpilot
-cd $VIDPILOT_DIR
+**macOS/Linux:**
+```
+cd {skillDir}
 source .venv/bin/activate
-
-# Generate TTS audio
 VIDPILOT_PROJECT={projectDir} ACCOUNT={accountId} python scripts/generate-audio-{format}.py
-
-# Render video
 cd engine
 VIDPILOT_PROJECT={projectDir} npx remotion render {accountId}-{format} ../out/{accountId}-{format}.mp4 --codec h264
+```
 
-# Merge audio + video
-ffmpeg -y -i ../out/{accountId}-{format}.mp4 -i ../out/{audioFile} \
-  -filter_complex "[0:a][1:a]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[aout]" \
-  -map 0:v:0 -map "[aout]" -c:v copy -c:a aac -b:a 128k -shortest \
-  ../out/{accountId}-{format}-final.mp4
+**Windows (PowerShell):**
+```
+cd {skillDir}
+.venv\Scripts\activate
+$env:VIDPILOT_PROJECT="{projectDir}"; $env:ACCOUNT="{accountId}"; python scripts/generate-audio-{format}.py
+cd engine
+$env:VIDPILOT_PROJECT="{projectDir}"; npx remotion render {accountId}-{format} ../out/{accountId}-{format}.mp4 --codec h264
+```
+
+**Merge audio + video (cross-platform):**
+```
+ffmpeg -y -i {skillDir}/out/{accountId}-{format}.mp4 -i {skillDir}/out/{audioFile} -filter_complex "[0:a][1:a]amix=inputs=2:duration=longest:dropout_transition=0:normalize=0[aout]" -map 0:v:0 -map "[aout]" -c:v copy -c:a aac -b:a 128k -shortest {skillDir}/out/{accountId}-{format}-final.mp4
 ```
 
 **Format -> TTS script -> Audio file mapping:**
