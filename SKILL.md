@@ -52,13 +52,34 @@ After user provides account info, show them exactly what you will create and ask
 >
 > **Files to create:**
 > - `vidpilot.json` — master config with your account settings
-> - `accounts/{accountId}/` — put your character images here (2 character PNGs + 1 background PNG)
+> - `accounts/{accountId}/` — asset directories, organized by type:
+>
+> ```
+> accounts/{accountId}/
+> ├── characters/       # 角色形象 (dialogue format)
+> │   ├── left.png      # Left character (PNG, ~500-800px, transparent bg recommended)
+> │   └── right.png     # Right character
+> ├── backgrounds/      # 背景图 (dialogue format)
+> │   └── bg.png        # Default background (1080x1920 for vertical video)
+> └── images/           # 每期配图 (narration format, add per-video)
+> ```
+>
 > - `output/{displayName}/` — rendered videos will be archived here by date
 >
+> **Which formats need which assets:**
+> | Format | Required Assets | Where to Put |
+> |--------|----------------|--------------|
+> | dialogue | 2 character PNGs + 1 background PNG | `characters/` + `backgrounds/` |
+> | slides | None (auto-rendered with colors + emoji) | - |
+> | ranking | None (auto-rendered with colors + emoji) | - |
+> | code | None (auto-rendered code blocks) | - |
+> | narration | Optional per-segment images | `images/` (add before each video) |
+>
 > **How it works:**
-> 1. You drop character images into `accounts/{accountId}/`
+> 1. Put character images in `accounts/{accountId}/characters/` (one-time setup)
 > 2. Tell me "make a video" and I'll find hot topics, write scripts, generate audio, and render video
-> 3. Final videos appear in `output/{displayName}/YYYY-MM-DD/`
+> 3. For narration videos, add topic-related images to `accounts/{accountId}/images/` before rendering
+> 4. Final videos appear in `output/{displayName}/YYYY-MM-DD/`
 >
 > Shall I proceed?
 
@@ -69,18 +90,28 @@ After user provides account info, show them exactly what you will create and ask
 Once confirmed:
 
 1. Create `vidpilot.json` with the account config (use config.example.json from skill dir as template, customize with user's info)
-2. Create `accounts/{accountId}/` directory
-3. Create `output/{displayName}/` directory
-4. Run `node {skillDir}/scripts/setup-accounts.mjs {projectDir}` to set up engine data dirs and registry
+2. Run `node {skillDir}/scripts/setup-accounts.mjs {projectDir}` — this auto-creates:
+   - `accounts/{accountId}/characters/`
+   - `accounts/{accountId}/backgrounds/`
+   - `accounts/{accountId}/images/`
+   - `output/{displayName}/`
+   - `engine/src/data/{accountId}/` (in skill dir)
 
 Then tell user:
 
-> Setup complete! Next steps:
-> 1. Add 3 images to `accounts/{accountId}/`:
->    - Two character images (PNG, ~500-800px, transparent background recommended)
->    - One background image (PNG, 1080x1920 recommended)
-> 2. Update the `characters` section in `vidpilot.json` with correct image filenames, dimensions, and face center coordinates
-> 3. Then just tell me "make a video" and I'll handle the rest!
+> Setup complete! Your asset directories are ready:
+>
+> **One-time setup** (do this once per account):
+> 1. Put left character image in `accounts/{accountId}/characters/` — filename must match `vidpilot.json` config
+> 2. Put right character image in `accounts/{accountId}/characters/`
+> 3. Put background image in `accounts/{accountId}/backgrounds/`
+> 4. Update `vidpilot.json` → `characters` section with correct filenames, image dimensions, and face center coordinates
+>
+> **Per-video setup** (only for narration format):
+> - Add topic-related images to `accounts/{accountId}/images/` before generating narration videos
+> - These images are referenced by filename in the narration script's `image` field
+>
+> **No images needed** for slides, ranking, and code formats — they render automatically!
 >
 > Want me to help you prepare character images now, or shall we make a video with the example characters first?
 
@@ -108,43 +139,67 @@ If there is only 1 account, auto-select it and confirm:
 
 ### 0.4 Verify Account Assets
 
-For the selected account, check that required images exist in `accounts/{accountId}/`:
+For the selected account, check that required images exist in the correct subdirectories:
 
 ```bash
-ls {CWD}/accounts/{accountId}/
+ls {CWD}/accounts/{accountId}/characters/
+ls {CWD}/accounts/{accountId}/backgrounds/
+ls {CWD}/accounts/{accountId}/images/
 ```
 
-Check for the files referenced in vidpilot.json: `characters.left.image`, `characters.right.image`, `backgroundImage`.
+Check for files referenced in vidpilot.json:
+- `characters.left.image` → should be in `accounts/{accountId}/characters/`
+- `characters.right.image` → should be in `accounts/{accountId}/characters/`
+- `backgroundImage` → should be in `accounts/{accountId}/backgrounds/`
 
-**If all images exist** -> Sync them to skill engine and proceed to Pipeline Step 1.
+**If all required images exist** -> Sync them to skill engine and proceed to Pipeline Step 1.
 
 ```bash
 node {skillDir}/scripts/setup-accounts.mjs {CWD}
 ```
 
-**If images are missing**, tell the user clearly:
+**If images are missing**, tell the user clearly which subdirectory needs what:
 
-> Account **"{name}"** is missing these required images in `accounts/{accountId}/`:
-> - `{missing-file-1}` — left character image
-> - `{missing-file-2}` — background image
+> Account **"{name}"** is missing these required assets:
 >
-> Please add these files and tell me when ready. The images should be:
-> - Character images: PNG, ~500-800px wide, transparent background works best
-> - Background image: PNG, 1080x1920 for vertical video
+> | Missing File | Put It In | Purpose |
+> |-------------|-----------|---------|
+> | `{filename}` | `accounts/{id}/characters/` | Left character for dialogue videos |
+> | `{filename}` | `accounts/{id}/backgrounds/` | Background for dialogue videos |
 >
+> Image requirements:
+> - **Character images**: PNG, ~500-800px wide, transparent background works best
+> - **Background image**: PNG, 1080x1920 for vertical video
+>
+> Please add these files and tell me when ready.
 > Alternatively, I can use example characters to make a test video first. Want to try that?
 
-**Do NOT proceed with video generation if critical assets are missing.** Wait for user.
+**Do NOT proceed with dialogue/narration video if critical assets are missing.** Slides, ranking, and code formats can proceed without any images.
 
-### 0.5 Adding a New Account to Existing Project
+### 0.5 Narration Format: Per-Video Image Check
+
+When the selected format is **narration** and the script references images (`segment.image`):
+
+1. Check if referenced images exist in `accounts/{accountId}/images/`
+2. If missing, tell user:
+
+> This narration script references images that aren't in `accounts/{accountId}/images/` yet:
+> - `{filename1}` — for segment "{segment text}"
+> - `{filename2}` — for segment "{segment text}"
+>
+> Options:
+> 1. Add the images to `accounts/{accountId}/images/` and tell me when ready
+> 2. I can generate the script without images (text-only narration, still looks good)
+> 3. I can use AI to generate placeholder images (requires image generation tool)
+
+### 0.6 Adding a New Account to Existing Project
 
 If the user says "add a new account" or "create another channel":
 
 1. Ask for account ID, display name, and content domain (same as 0.2.1)
 2. Read existing `vidpilot.json`, add the new account to the `accounts` object
-3. Create `accounts/{newId}/` and `output/{newName}/` directories
-4. Run setup-accounts.mjs to regenerate registry
-5. Remind user to add character images
+3. Run `setup-accounts.mjs` to create all subdirectories and regenerate registry
+4. Tell user which subdirectories were created and what to put in each
 
 ---
 
@@ -177,10 +232,23 @@ VidPilot separates **skill** (code, reusable) from **project** (user data, uniqu
 {CWD}/                             # PROJECT (user data, not in skill repo)
 ├── vidpilot.json                  # Account config (user creates/edits)
 ├── accounts/
-│   └── {accountId}/               # Character images per account
+│   └── {accountId}/
+│       ├── characters/            # Character images (one-time, dialogue format)
+│       ├── backgrounds/           # Background images (one-time, dialogue format)
+│       └── images/                # Per-video images (narration format)
 └── output/
     └── {displayName}/             # Archived videos per account
+        └── YYYY-MM-DD/
 ```
+
+**Asset subdirectory roles:**
+
+| Directory | Used By | Frequency | Description |
+|-----------|---------|-----------|-------------|
+| `characters/` | dialogue | One-time setup | Left/right character PNGs, transparent bg recommended |
+| `backgrounds/` | dialogue | One-time setup | 1080x1920 vertical background |
+| `images/` | narration | Per-video | Topic images referenced in narration script's `segment.image` |
+| _(none needed)_ | slides, ranking, code | - | Auto-rendered, no external images |
 
 **Config resolution order:**
 1. `VIDPILOT_CONFIG` env var (absolute path)
@@ -240,6 +308,8 @@ Write data files to `{skillDir}/engine/src/data/{accountId}/`. Then run `node sc
 
 **Character names come from vidpilot.json** (not hardcoded in data files).
 
+**Narration image references**: When generating narration scripts with images, the `segment.image` field should reference filenames that the user has placed in `accounts/{accountId}/images/`. Run `setup-accounts.mjs` after adding images to sync them to `engine/public/`.
+
 #### 4A: Dialogue Script
 
 - 60-90s, 12-18 rounds, 200-350 chars total
@@ -273,6 +343,8 @@ export const dialogue: DialogueLine[] = [
 
 - 4-8 segments, text <= 30 chars
 - Effects: `kenburns` `fadeIn` `zoomIn`
+- `image` field is optional: references filename in `accounts/{accountId}/images/`
+- Without images, narration renders with text-only animated backgrounds (still looks good)
 
 #### 4F: Article
 
@@ -287,6 +359,14 @@ GitHub is the primary verification source. Check each claim per format guideline
 ---
 
 ### Step 6: Generate Audio + Render Video
+
+Before rendering, sync assets from project to skill engine:
+
+```bash
+node {skillDir}/scripts/setup-accounts.mjs {projectDir}
+```
+
+Then generate audio and render:
 
 ```bash
 VIDPILOT_DIR=~/.claude/skills/vidpilot
@@ -369,6 +449,6 @@ export const registry = {
 - Composition IDs: `{accountId}-{format}`
 - TTS routing: `ACCOUNT={accountId}` env var
 - Config file: `vidpilot.json` in **project** directory (not skill directory)
-- Assets: `accounts/{id}/` in **project** directory
+- Assets: `accounts/{id}/` in **project** directory (subdivided by type)
 - Output: `output/{name}/` in **project** directory
 - Never mix data between accounts

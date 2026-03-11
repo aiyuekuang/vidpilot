@@ -8,7 +8,7 @@
  *   # or with VIDPILOT_PROJECT env var
  *   VIDPILOT_PROJECT=/path/to/project node scripts/setup-accounts.mjs
  */
-import { readFileSync, writeFileSync, mkdirSync, existsSync, copyFileSync } from "fs";
+import { readFileSync, writeFileSync, mkdirSync, existsSync, copyFileSync, readdirSync } from "fs";
 import { join, dirname, resolve } from "path";
 import { fileURLToPath } from "url";
 
@@ -45,15 +45,21 @@ function resolveDir(dir) {
   return join(PROJECT_DIR, dir);
 }
 
+// Asset subdirectories under accounts/{id}/
+const ASSET_SUBDIRS = ["characters", "backgrounds", "images"];
+
 // Create directories for each account
 for (const id of accountIds) {
   const acct = accounts[id];
 
-  // Assets: {project}/accounts/{id}/ — user drops images here
+  // Assets: {project}/accounts/{id}/ with subdirectories
   const assetsDir = join(PROJECT_DIR, "accounts", id);
-  if (!existsSync(assetsDir)) {
-    mkdirSync(assetsDir, { recursive: true });
-    console.log(`[ok] Created: accounts/${id}/`);
+  for (const sub of ASSET_SUBDIRS) {
+    const subDir = join(assetsDir, sub);
+    if (!existsSync(subDir)) {
+      mkdirSync(subDir, { recursive: true });
+      console.log(`[ok] Created: accounts/${id}/${sub}/`);
+    }
   }
 
   // Output: {project}/output/{name}/ — archived videos
@@ -70,20 +76,47 @@ for (const id of accountIds) {
     console.log(`[ok] Created: engine/src/data/${id}/ (in skill)`);
   }
 
-  // Sync images: {project}/accounts/{id}/ → {skill}/engine/public/
-  const imageFiles = new Set();
-  if (acct.characters?.left?.image) imageFiles.add(acct.characters.left.image);
-  if (acct.characters?.right?.image) imageFiles.add(acct.characters.right.image);
-  if (acct.backgroundImage) imageFiles.add(acct.backgroundImage);
+  // Sync images from account subdirectories → {skill}/engine/public/
+  // characters/ → character images referenced by vidpilot.json
+  // backgrounds/ → background images referenced by vidpilot.json
+  // images/ → narration segment images (referenced in data files at runtime)
 
-  for (const img of imageFiles) {
-    const src = join(assetsDir, img);
-    const dest = join(ENGINE_PUBLIC, img);
-    if (existsSync(src) && !existsSync(dest)) {
+  // Collect required files and their source subdirectories
+  const syncMap = []; // { filename, subdir, purpose }
+  if (acct.characters?.left?.image) {
+    syncMap.push({ filename: acct.characters.left.image, subdir: "characters", purpose: "left character" });
+  }
+  if (acct.characters?.right?.image) {
+    syncMap.push({ filename: acct.characters.right.image, subdir: "characters", purpose: "right character" });
+  }
+  if (acct.backgroundImage) {
+    syncMap.push({ filename: acct.backgroundImage, subdir: "backgrounds", purpose: "background" });
+  }
+
+  for (const { filename, subdir, purpose } of syncMap) {
+    const src = join(assetsDir, subdir, filename);
+    const dest = join(ENGINE_PUBLIC, filename);
+    if (existsSync(src)) {
       copyFileSync(src, dest);
-      console.log(`[ok] Synced: accounts/${id}/${img} → engine/public/`);
-    } else if (!existsSync(src) && !existsSync(dest)) {
-      console.log(`[warn] Missing: accounts/${id}/${img} — add your image here`);
+      console.log(`[ok] Synced: accounts/${id}/${subdir}/${filename} → engine/public/`);
+    } else if (!existsSync(dest)) {
+      console.log(`[warn] Missing ${purpose}: accounts/${id}/${subdir}/${filename}`);
+    }
+  }
+
+  // Sync all images from images/ subdirectory (for narration segments)
+  const imagesDir = join(assetsDir, "images");
+  if (existsSync(imagesDir)) {
+    const imageFiles = readdirSync(imagesDir).filter(f =>
+      /\.(png|jpe?g|webp|gif|svg)$/i.test(f)
+    );
+    for (const img of imageFiles) {
+      const src = join(imagesDir, img);
+      const dest = join(ENGINE_PUBLIC, img);
+      copyFileSync(src, dest);
+    }
+    if (imageFiles.length > 0) {
+      console.log(`[ok] Synced: accounts/${id}/images/ (${imageFiles.length} files) → engine/public/`);
     }
   }
 }
