@@ -1,12 +1,11 @@
+---
+name: vidpilot
+description: "AI-powered short video automation. Triggers when user says 'make a video', 'generate content', 'run vidpilot', or references video/content creation for social media accounts. Supports 5 video formats (dialogue, slides, ranking, code demo, narration) + article. Multi-account support with config-driven characters, voice seeds, and personas. Full pipeline: hot topic collection, script generation, TTS audio (ChatTTS), Remotion video rendering, and FFmpeg merging."
+---
+
 # VidPilot - AI Short Video Automation Skill
 
 Multi-account short video automation for Claude Code. Supports 5 video modes + article format.
-
----
-
-## Trigger
-
-User says "make a video", "generate content", "run vidpilot", account names, or references to video/content creation.
 
 ---
 
