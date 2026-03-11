@@ -30,7 +30,7 @@
         "right": 2024,
         "narrator": 2024
       },
-      "persona": {
+      "style": {
         "positioning": "10+ 年后端工程师，全职研究 AI 工具提效",
         "tone": "直接、实在、不装",
         "audience": "25-40 岁程序员、技术创业者",
@@ -40,9 +40,10 @@
         },
         "taboos": ["不捏造数据", "不过分夸张", "不踩一捧一"]
       },
-      "hotspot": {
+      "research": {
         "script": "fetch-ai-hot.mjs",
-        "fallback": "site:36kr.com OR site:ithome.com AI 大模型"
+        "sources": ["36kr.com", "ithome.com"],
+        "keywords": ["AI", "大模型", "工具提效"]
       }
     },
     "stock": {
@@ -69,8 +70,8 @@
         "right": 2024,
         "narrator": 2024
       },
-      "persona": {
-        "positioning": "股市早评/热点速递",
+      "style": {
+        "positioning": "股市资讯短视频",
         "tone": "接地气，韭菜视角",
         "audience": "散户股民",
         "roles": {
@@ -79,9 +80,9 @@
         },
         "taboos": ["不推荐个股", "不预测涨跌", "不承诺收益"]
       },
-      "hotspot": {
-        "script": null,
-        "fallback": "A股 港股 美股 今日行情"
+      "research": {
+        "sources": ["eastmoney.com", "xueqiu.com", "cls.cn"],
+        "keywords": ["A股", "港股", "美股", "行情"]
       }
     }
   }

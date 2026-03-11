@@ -263,7 +263,12 @@ VidPilot separates **skill** (code, reusable) from **project** (user data, uniqu
 
 ### Step 1: Collect Hot Topics
 
-Use WebSearch or custom scripts defined in `vidpilot.json` account's `hotspot` field.
+Use WebSearch or custom scripts defined in `vidpilot.json` account's `research` field.
+- `research.script`: custom fetch script (optional)
+- `research.sources`: preferred websites for research
+- `research.keywords`: default search keywords
+
+For fixed topics (e.g., morning brief, closing review), skip trend searching and go directly to Step 3 with the given topic. The rest of the pipeline is the same.
 
 ---
 
