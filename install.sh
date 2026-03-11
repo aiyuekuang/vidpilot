@@ -54,19 +54,6 @@ else
   echo "[warn] python3 not found, TTS unavailable"
 fi
 
-# 5. Install as Claude Code skill
-echo ""
-SKILLS_DIR="$HOME/.claude/skills"
-if [ -d "$SKILLS_DIR" ]; then
-  SKILL_LINK="$SKILLS_DIR/vidpilot"
-  if [ ! -e "$SKILL_LINK" ]; then
-    ln -s "$SKILL_DIR" "$SKILL_LINK"
-    echo "[ok] Skill installed: $SKILL_LINK"
-  else
-    echo "[skip] Skill already linked"
-  fi
-fi
-
 echo ""
 echo "=== Done ==="
 echo ""
