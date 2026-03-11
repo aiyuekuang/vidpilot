@@ -9,78 +9,59 @@ echo ""
 # 1. Copy example config (don't overwrite existing)
 if [ ! -f "$PROJECT_DIR/config.json" ]; then
   cp "$PROJECT_DIR/config.example.json" "$PROJECT_DIR/config.json"
-  echo "[ok] Created config: $PROJECT_DIR/config.json"
-  echo "     Edit this file to configure your accounts."
+  echo "[ok] Created config.json from template"
+  echo "     Edit config.json to add your accounts, then re-run install.sh"
 else
-  echo "[skip] Config already exists: $PROJECT_DIR/config.json"
+  echo "[skip] config.json already exists"
 fi
 
-# 2. Copy registry template (don't overwrite existing)
-REGISTRY="$PROJECT_DIR/engine/src/data/registry.ts"
-if [ ! -f "$REGISTRY" ]; then
-  cp "$PROJECT_DIR/engine/src/data/registry.example.ts" "$REGISTRY"
-  echo "[ok] Created data registry: $REGISTRY"
-else
-  echo "[skip] Data registry already exists."
-fi
-
-# 3. Install Remotion engine dependencies
+# 2. Install Remotion engine dependencies
 echo ""
-echo "[step] Installing Remotion engine dependencies..."
+echo "[step] Installing engine dependencies..."
 cd "$PROJECT_DIR/engine"
 npm install --silent
-echo "[ok] Engine dependencies installed."
+echo "[ok] Engine ready"
 
-# 3. Create Python venv for TTS (optional)
+# 3. Setup account directories + generate registry.ts from config.json
 echo ""
-echo "[step] Setting up Python environment for TTS..."
+echo "[step] Setting up accounts..."
+cd "$PROJECT_DIR"
+node scripts/setup-accounts.mjs
+
+# 4. Create Python venv for TTS (optional)
+echo ""
+echo "[step] Setting up TTS environment..."
 if command -v python3 &> /dev/null; then
   if [ ! -d "$PROJECT_DIR/.venv" ]; then
     python3 -m venv "$PROJECT_DIR/.venv"
-    echo "[ok] Python venv created: $PROJECT_DIR/.venv"
-  else
-    echo "[skip] Python venv already exists."
+    echo "[ok] Python venv created"
   fi
-
   source "$PROJECT_DIR/.venv/bin/activate"
-
-  # Check if ChatTTS is installed
   if ! python3 -c "import ChatTTS" 2>/dev/null; then
-    echo "[step] Installing ChatTTS and dependencies..."
+    echo "[step] Installing ChatTTS (this may take a few minutes)..."
     pip install -q ChatTTS torch torchaudio soundfile numpy
-    echo "[ok] TTS dependencies installed."
+    echo "[ok] TTS ready"
   else
-    echo "[skip] ChatTTS already installed."
+    echo "[skip] TTS already installed"
   fi
 else
-  echo "[warn] python3 not found. TTS features will not be available."
-  echo "       Install Python 3.10+ to enable voice generation."
+  echo "[warn] python3 not found, TTS unavailable"
 fi
 
-# 4. Install as Claude Code skill (optional)
+# 5. Install as Claude Code skill
 echo ""
 SKILLS_DIR="$HOME/.claude/skills"
 if [ -d "$SKILLS_DIR" ]; then
   SKILL_LINK="$SKILLS_DIR/vidpilot"
   if [ ! -e "$SKILL_LINK" ]; then
     ln -s "$PROJECT_DIR" "$SKILL_LINK"
-    echo "[ok] Installed as Claude Code skill: $SKILL_LINK"
+    echo "[ok] Skill installed: $SKILL_LINK"
   else
-    echo "[skip] Claude Code skill already linked."
+    echo "[skip] Skill already linked"
   fi
-else
-  echo "[info] Claude Code skills directory not found."
-  echo "       To use as a skill, manually symlink:"
-  echo "       ln -s $PROJECT_DIR $SKILLS_DIR/vidpilot"
 fi
 
 echo ""
-echo "=== Install Complete ==="
+echo "=== Done ==="
 echo ""
-echo "Next steps:"
-echo "  1. Edit $PROJECT_DIR/config.json to configure your accounts"
-echo "  2. Add character images to engine/public/"
-echo "  3. Use 'ACCOUNT=yourname' with the TTS and render scripts"
-echo ""
-echo "Quick test:"
-echo "  cd $PROJECT_DIR/engine && npx remotion studio src/index.ts"
+echo "Next: add character images to engine/public/, then ask Claude to make a video!"
