@@ -150,7 +150,7 @@ ls {CWD}/accounts/{accountId}/images/
 Check for files referenced in vidpilot.json:
 - `characters.left.image` → should be in `accounts/{accountId}/characters/`
 - `characters.right.image` → should be in `accounts/{accountId}/characters/`
-- `backgroundImage` → should be in `accounts/{accountId}/backgrounds/`
+- `background` → should be in `accounts/{accountId}/backgrounds/`
 
 **If all required images exist** -> Sync them to skill engine and proceed to Pipeline Step 1.
 
@@ -413,7 +413,7 @@ Generate 3 title candidates (15-20 chars, hook in first 5 chars).
 ### Step 8: Archive
 
 ```
-{projectDir}/{account.outputDir}/YYYY-MM-DD/
+{projectDir}/output/{accountId}/YYYY-MM-DD/
   ├── [video-title].mp4
   ├── [data-file].ts
   └── README.md

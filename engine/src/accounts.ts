@@ -22,41 +22,42 @@ function findConfigPath(): string {
   );
 }
 
+// ── Raw config types (match vidpilot.json schema v1) ──
+
 interface RawCharacter {
   name: string;
   image: string;
-  imageWidth: number;
-  imageHeight: number;
-  faceCenter: { x: number; y: number; radius: number };
+  size: [number, number];     // [width, height]
+  face: [number, number, number]; // [x, y, radius]
 }
 
 interface RawAccount {
   name: string;
-  outputDir: string;
   formats?: string[];
+  theme?: string;
   characters: { left: RawCharacter; right: RawCharacter };
-  backgroundImage: string;
-  defaultTheme: string;
-  voiceSeeds: { left: number; right: number; narrator: number };
-  files: Record<string, string>;
+  background: string;
+  tts: { left: number; right: number; narrator: number };
 }
 
 interface RawConfig {
-  global: { fps: number; width: number; height: number };
+  version: number;
+  video: { fps: number; width: number; height: number };
   accounts: Record<string, RawAccount>;
 }
 
-function resolvePath(p: string, projectRoot: string): string {
-  if (p.startsWith("~/")) {
-    return path.join(process.env.HOME || "", p.slice(2));
-  }
-  if (path.isAbsolute(p)) return p;
-  return path.resolve(projectRoot, p);
+function parseCharacter(raw: RawCharacter) {
+  return {
+    name: raw.name,
+    image: raw.image,
+    imageWidth: raw.size[0],
+    imageHeight: raw.size[1],
+    faceCenter: { x: raw.face[0], y: raw.face[1], radius: raw.face[2] },
+  };
 }
 
-function loadConfig(): { global: RawConfig["global"]; accounts: Record<string, AccountConfig> } {
+function loadConfig(): { video: RawConfig["video"]; accounts: Record<string, AccountConfig> } {
   const configPath = findConfigPath();
-  const projectRoot = path.dirname(configPath);
   const raw: RawConfig = JSON.parse(fs.readFileSync(configPath, "utf-8"));
   const result: Record<string, AccountConfig> = {};
 
@@ -64,20 +65,20 @@ function loadConfig(): { global: RawConfig["global"]; accounts: Record<string, A
     result[id] = {
       id,
       name: acct.name,
-      outputDir: resolvePath(acct.outputDir, projectRoot),
-      leftCharacter: acct.characters.left,
-      rightCharacter: acct.characters.right,
-      backgroundImage: acct.backgroundImage,
-      defaultTheme: acct.defaultTheme as ThemeName,
-      voiceSeeds: acct.voiceSeeds,
+      outputDir: path.resolve(path.dirname(configPath), "output", id),
+      leftCharacter: parseCharacter(acct.characters.left),
+      rightCharacter: parseCharacter(acct.characters.right),
+      backgroundImage: acct.background,
+      defaultTheme: (acct.theme || "dark") as ThemeName,
+      voiceSeeds: acct.tts,
       formats: acct.formats as any,
     };
   }
-  return { global: raw.global, accounts: result };
+  return { video: raw.video, accounts: result };
 }
 
 const config = loadConfig();
-export const globalConfig = config.global;
+export const globalConfig = config.video;
 export const accounts = config.accounts;
 
 export function getAccount(id: string): AccountConfig {

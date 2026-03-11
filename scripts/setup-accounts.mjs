@@ -3,13 +3,20 @@
  * Read vidpilot.json from project directory, create account directories,
  * sync assets, and generate registry.ts in the skill engine.
  *
+ * Config schema v1:
+ *   - outputDir derived from account ID: output/{id}/
+ *   - filenames use convention: {format}.ts (no explicit "files" mapping)
+ *   - character images in accounts/{id}/characters/
+ *   - background images in accounts/{id}/backgrounds/
+ *   - narration images in accounts/{id}/images/
+ *
  * Usage:
  *   node scripts/setup-accounts.mjs /path/to/project
  *   # or with VIDPILOT_PROJECT env var
  *   VIDPILOT_PROJECT=/path/to/project node scripts/setup-accounts.mjs
  */
 import { readFileSync, writeFileSync, mkdirSync, existsSync, copyFileSync, readdirSync } from "fs";
-import { join, dirname, resolve } from "path";
+import { join, dirname } from "path";
 import { fileURLToPath } from "url";
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -38,15 +45,11 @@ if (accountIds.length === 0) {
   process.exit(0);
 }
 
-function resolveDir(dir) {
-  if (!dir) return null;
-  if (dir.startsWith("~/")) return join(process.env.HOME || "", dir.slice(2));
-  if (dir.startsWith("/")) return dir;
-  return join(PROJECT_DIR, dir);
-}
-
 // Asset subdirectories under accounts/{id}/
 const ASSET_SUBDIRS = ["characters", "backgrounds", "images"];
+
+// Convention-based format → filename
+const FORMAT_FILENAME = (format) => `${format}.ts`;
 
 // Create directories for each account
 for (const id of accountIds) {
@@ -62,11 +65,11 @@ for (const id of accountIds) {
     }
   }
 
-  // Output: {project}/output/{name}/ — archived videos
-  const outputDir = resolveDir(acct.outputDir);
-  if (outputDir && !existsSync(outputDir)) {
+  // Output: {project}/output/{id}/
+  const outputDir = join(PROJECT_DIR, "output", id);
+  if (!existsSync(outputDir)) {
     mkdirSync(outputDir, { recursive: true });
-    console.log(`[ok] Created: ${acct.outputDir}`);
+    console.log(`[ok] Created: output/${id}/`);
   }
 
   // Data: {skill}/engine/src/data/{id}/ — skill writes content here (Remotion needs this)
@@ -77,20 +80,15 @@ for (const id of accountIds) {
   }
 
   // Sync images from account subdirectories → {skill}/engine/public/
-  // characters/ → character images referenced by vidpilot.json
-  // backgrounds/ → background images referenced by vidpilot.json
-  // images/ → narration segment images (referenced in data files at runtime)
-
-  // Collect required files and their source subdirectories
-  const syncMap = []; // { filename, subdir, purpose }
+  const syncMap = [];
   if (acct.characters?.left?.image) {
     syncMap.push({ filename: acct.characters.left.image, subdir: "characters", purpose: "left character" });
   }
   if (acct.characters?.right?.image) {
     syncMap.push({ filename: acct.characters.right.image, subdir: "characters", purpose: "right character" });
   }
-  if (acct.backgroundImage) {
-    syncMap.push({ filename: acct.backgroundImage, subdir: "backgrounds", purpose: "background" });
+  if (acct.background) {
+    syncMap.push({ filename: acct.background, subdir: "backgrounds", purpose: "background" });
   }
 
   for (const { filename, subdir, purpose } of syncMap) {
@@ -121,10 +119,12 @@ for (const id of accountIds) {
   }
 }
 
-// Generate registry.ts
+// ── Generate registry.ts ──
+
 const imports = [];
 const entries = [];
 
+// Example account (always included)
 imports.push(`// ── example ──`);
 imports.push(`import { dialogue as exampleDialogue } from "./example/dialogue.example";`);
 imports.push(`import { slides as exampleSlides, theme as exampleSlidesTheme } from "./example/slides.example";`);
@@ -140,25 +140,27 @@ entries.push(`  example: {
     narration: { data: exampleSegments, totalFrames: sumFrames(exampleSegments), theme: exampleNarrationTheme },
   }`);
 
+// Format metadata for registry generation
+const formatMeta = {
+  dialogue:  { imp: "dialogue",   var: "Dialogue" },
+  slides:    { imp: "slides, theme", var: "Slides",     theme: "SlidesTheme" },
+  ranking:   { imp: "rankSlides, theme", var: "RankSlides", theme: "RankTheme" },
+  code:      { imp: "codeSteps, theme", var: "CodeSteps",  theme: "CodeTheme" },
+  narration: { imp: "segments, theme", var: "Segments",   theme: "NarrationTheme" },
+};
+
 for (const id of accountIds) {
   const acct = accounts[id];
-  const files = acct.files || {};
+  const formats = acct.formats || [];
   const prefix = id.replace(/-/g, "_");
   const accountEntries = [];
 
   imports.push(`\n// ── ${id} ──`);
 
-  const formatMap = {
-    dialogue:  { imp: "dialogue",   var: "Dialogue" },
-    slides:    { imp: "slides, theme", var: "Slides",     theme: "SlidesTheme" },
-    ranking:   { imp: "rankSlides, theme", var: "RankSlides", theme: "RankTheme" },
-    code:      { imp: "codeSteps, theme", var: "CodeSteps",  theme: "CodeTheme" },
-    narration: { imp: "segments, theme", var: "Segments",   theme: "NarrationTheme" },
-  };
+  for (const [format, meta] of Object.entries(formatMeta)) {
+    if (!formats.includes(format)) continue;
 
-  for (const [format, meta] of Object.entries(formatMap)) {
-    const filename = files[format];
-    if (!filename) continue;
+    const filename = FORMAT_FILENAME(format);
     if (!existsSync(join(ENGINE_DATA, id, filename))) continue;
 
     const mod = filename.replace(/\.ts$/, "");

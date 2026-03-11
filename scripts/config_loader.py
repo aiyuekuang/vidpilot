@@ -5,6 +5,11 @@ Config search order:
 1. VIDPILOT_CONFIG env var (absolute path)
 2. VIDPILOT_PROJECT env var + /vidpilot.json
 3. CWD/vidpilot.json (project root)
+
+Config schema v1:
+  video: { fps, width, height }
+  accounts.{id}: { name, formats, theme, characters, background, tts, persona, hotspot }
+  tts: { left, right, narrator }  (ChatTTS seed numbers)
 """
 
 import json
@@ -56,16 +61,31 @@ def get_account(account_id):
     return acct, data_dir, engine_dir
 
 
+def get_voice_seeds(acct):
+    """Extract voice seeds from account config (v1 schema: tts.{left,right,narrator})."""
+    tts = acct.get("tts", {})
+    return {
+        "left": tts.get("left", 42),
+        "right": tts.get("right", 2024),
+        "narrator": tts.get("narrator", 2024),
+    }
+
+
 def get_data_file_path(account_id, format_key, fallback_env=None, fallback_default=None):
-    """Resolve the data file path for a given account and format."""
+    """Resolve the data file path for a given account and format.
+
+    v1 schema uses convention-based filenames: {format}.ts
+    """
     account_id_env = os.environ.get("ACCOUNT", account_id)
 
     if account_id_env:
         try:
             acct, data_dir, engine_dir = get_account(account_id_env)
-            filename = acct.get("files", {}).get(format_key)
-            if filename:
-                return os.path.join(data_dir, filename), acct.get("voiceSeeds", {})
+            # Convention: {format}.ts
+            filename = f"{format_key}.ts"
+            filepath = os.path.join(data_dir, filename)
+            if os.path.exists(filepath):
+                return filepath, get_voice_seeds(acct)
         except SystemExit:
             pass
 

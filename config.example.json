@@ -1,5 +1,6 @@
 {
-  "global": {
+  "version": 1,
+  "video": {
     "fps": 30,
     "width": 1080,
     "height": 1920
@@ -7,43 +8,33 @@
   "accounts": {
     "laodong": {
       "name": "程序员老东",
-      "outputDir": "output/程序员老东",
       "formats": ["dialogue", "slides", "ranking", "code", "narration", "article"],
+      "theme": "dark",
       "characters": {
         "left": {
           "name": "小李",
           "image": "left.png",
-          "imageWidth": 533,
-          "imageHeight": 800,
-          "faceCenter": { "x": 208, "y": 280, "radius": 160 }
+          "size": [533, 800],
+          "face": [208, 280, 160]
         },
         "right": {
           "name": "老王",
           "image": "right.png",
-          "imageWidth": 676,
-          "imageHeight": 800,
-          "faceCenter": { "x": 350, "y": 250, "radius": 130 }
+          "size": [676, 800],
+          "face": [350, 250, 130]
         }
       },
-      "backgroundImage": "bg.png",
-      "defaultTheme": "dark",
-      "voiceSeeds": {
+      "background": "bg.png",
+      "tts": {
         "left": 42,
         "right": 2024,
         "narrator": 2024
-      },
-      "files": {
-        "dialogue": "ai-dialogue.ts",
-        "slides": "ai-slides.ts",
-        "ranking": "ai-ranking.ts",
-        "code": "ai-code.ts",
-        "narration": "ai-narration.ts"
       },
       "persona": {
         "positioning": "10+ 年后端工程师，全职研究 AI 工具提效",
         "tone": "直接、实在、不装",
         "audience": "25-40 岁程序员、技术创业者",
-        "dialogueRoles": {
+        "roles": {
           "left": "小李（年轻焦虑）",
           "right": "老王（看透本质，冷幽默）"
         },
@@ -51,44 +42,38 @@
       },
       "hotspot": {
         "script": "fetch-ai-hot.mjs",
-        "fallbackSearch": "site:36kr.com OR site:ithome.com AI 大模型"
+        "fallback": "site:36kr.com OR site:ithome.com AI 大模型"
       }
     },
     "stock": {
       "name": "A股早知道",
-      "outputDir": "output/A股早知道",
       "formats": ["dialogue"],
+      "theme": "warm",
       "characters": {
         "left": {
           "name": "小韭",
           "image": "left.png",
-          "imageWidth": 533,
-          "imageHeight": 800,
-          "faceCenter": { "x": 208, "y": 280, "radius": 160 }
+          "size": [533, 800],
+          "face": [208, 280, 160]
         },
         "right": {
           "name": "老张",
           "image": "right.png",
-          "imageWidth": 676,
-          "imageHeight": 800,
-          "faceCenter": { "x": 350, "y": 250, "radius": 130 }
+          "size": [676, 800],
+          "face": [350, 250, 130]
         }
       },
-      "backgroundImage": "bg.png",
-      "defaultTheme": "warm",
-      "voiceSeeds": {
+      "background": "bg.png",
+      "tts": {
         "left": 42,
         "right": 2024,
         "narrator": 2024
-      },
-      "files": {
-        "dialogue": "dialogue.ts"
       },
       "persona": {
         "positioning": "股市早评/热点速递",
         "tone": "接地气，韭菜视角",
         "audience": "散户股民",
-        "dialogueRoles": {
+        "roles": {
           "left": "小韭（新韭菜，追涨杀跌）",
           "right": "老张（老韭菜，看透涨跌）"
         },
@@ -96,7 +81,7 @@
       },
       "hotspot": {
         "script": null,
-        "fallbackSearch": "A股 港股 美股 今日行情"
+        "fallback": "A股 港股 美股 今日行情"
       }
     }
   }
