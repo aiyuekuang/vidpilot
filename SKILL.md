@@ -9,6 +9,145 @@ Multi-account short video automation for Claude Code. Supports 5 video modes + a
 
 ---
 
+## Step 0: Environment Check (MUST DO FIRST)
+
+Every time the user triggers vidpilot, you MUST run through these checks **in order** before doing anything else. Do NOT skip any check. Do NOT assume anything exists.
+
+### 0.1 Locate Project Directory
+
+The project directory is the user's current working directory (CWD). Check if `vidpilot.json` exists there:
+
+```bash
+ls {CWD}/vidpilot.json
+```
+
+**If vidpilot.json exists** -> go to 0.3.
+
+**If vidpilot.json does NOT exist** -> go to 0.2.
+
+### 0.2 First-Time Setup: Guide User Through Initialization
+
+This is a new project. Walk the user through setup interactively.
+
+**0.2.1 Ask for account name**
+
+Tell the user:
+
+> VidPilot needs an account config. An "account" represents one content brand/channel (e.g., a TikTok account, a YouTube channel).
+>
+> Please tell me:
+> 1. **Account ID** — a short English identifier, used as folder name (e.g., `laodong`, `stock`, `my-tech`)
+> 2. **Display Name** — the channel/brand name shown in output (e.g., "程序员老东", "Tech Daily")
+> 3. **Content domain** — what kind of content? (e.g., AI tech, stock market, coding tutorials)
+>
+> I'll create the config and directories for you.
+
+**Wait for user response.** Do NOT proceed without their input.
+
+**0.2.2 Confirm and explain what will be created**
+
+After user provides account info, show them exactly what you will create and ask for confirmation:
+
+> I'll set up VidPilot for account **"{displayName}"** (ID: `{accountId}`):
+>
+> **Files to create:**
+> - `vidpilot.json` — master config with your account settings
+> - `accounts/{accountId}/` — put your character images here (2 character PNGs + 1 background PNG)
+> - `output/{displayName}/` — rendered videos will be archived here by date
+>
+> **How it works:**
+> 1. You drop character images into `accounts/{accountId}/`
+> 2. Tell me "make a video" and I'll find hot topics, write scripts, generate audio, and render video
+> 3. Final videos appear in `output/{displayName}/YYYY-MM-DD/`
+>
+> Shall I proceed?
+
+**Wait for user confirmation.** Do NOT create anything without "yes/ok/proceed" from user.
+
+**0.2.3 Create config and directories**
+
+Once confirmed:
+
+1. Create `vidpilot.json` with the account config (use config.example.json from skill dir as template, customize with user's info)
+2. Create `accounts/{accountId}/` directory
+3. Create `output/{displayName}/` directory
+4. Run `node {skillDir}/scripts/setup-accounts.mjs {projectDir}` to set up engine data dirs and registry
+
+Then tell user:
+
+> Setup complete! Next steps:
+> 1. Add 3 images to `accounts/{accountId}/`:
+>    - Two character images (PNG, ~500-800px, transparent background recommended)
+>    - One background image (PNG, 1080x1920 recommended)
+> 2. Update the `characters` section in `vidpilot.json` with correct image filenames, dimensions, and face center coordinates
+> 3. Then just tell me "make a video" and I'll handle the rest!
+>
+> Want me to help you prepare character images now, or shall we make a video with the example characters first?
+
+### 0.3 Load Account List
+
+Read `vidpilot.json` and list all available accounts:
+
+```bash
+cat {CWD}/vidpilot.json
+```
+
+Parse the `accounts` object. If there are multiple accounts, present them to the user:
+
+> Found {N} accounts:
+> | # | ID | Name | Formats |
+> |---|-----|------|---------|
+> | 1 | {id1} | {name1} | dialogue, slides, ... |
+> | 2 | {id2} | {name2} | dialogue |
+>
+> Which account should I use?
+
+If there is only 1 account, auto-select it and confirm:
+
+> Using account **"{name}"** (ID: `{id}`). Let me check the assets...
+
+### 0.4 Verify Account Assets
+
+For the selected account, check that required images exist in `accounts/{accountId}/`:
+
+```bash
+ls {CWD}/accounts/{accountId}/
+```
+
+Check for the files referenced in vidpilot.json: `characters.left.image`, `characters.right.image`, `backgroundImage`.
+
+**If all images exist** -> Sync them to skill engine and proceed to Pipeline Step 1.
+
+```bash
+node {skillDir}/scripts/setup-accounts.mjs {CWD}
+```
+
+**If images are missing**, tell the user clearly:
+
+> Account **"{name}"** is missing these required images in `accounts/{accountId}/`:
+> - `{missing-file-1}` — left character image
+> - `{missing-file-2}` — background image
+>
+> Please add these files and tell me when ready. The images should be:
+> - Character images: PNG, ~500-800px wide, transparent background works best
+> - Background image: PNG, 1080x1920 for vertical video
+>
+> Alternatively, I can use example characters to make a test video first. Want to try that?
+
+**Do NOT proceed with video generation if critical assets are missing.** Wait for user.
+
+### 0.5 Adding a New Account to Existing Project
+
+If the user says "add a new account" or "create another channel":
+
+1. Ask for account ID, display name, and content domain (same as 0.2.1)
+2. Read existing `vidpilot.json`, add the new account to the `accounts` object
+3. Create `accounts/{newId}/` and `output/{newName}/` directories
+4. Run setup-accounts.mjs to regenerate registry
+5. Remind user to add character images
+
+---
+
 ## Architecture: Skill vs Project
 
 VidPilot separates **skill** (code, reusable) from **project** (user data, unique per user).
@@ -35,19 +174,12 @@ VidPilot separates **skill** (code, reusable) from **project** (user data, uniqu
 │   └── ...
 └── install.sh
 
-~/Desktop/code/my-project/         # PROJECT (user data, not in skill repo)
-├── vidpilot.json                  # Account config
+{CWD}/                             # PROJECT (user data, not in skill repo)
+├── vidpilot.json                  # Account config (user creates/edits)
 ├── accounts/
-│   ├── laodong/                   # Character images for account
-│   │   ├── char-韭菜.png
-│   │   ├── char-主力.png
-│   │   └── bg-today.png
-│   └── stock/
-│       └── ...
+│   └── {accountId}/               # Character images per account
 └── output/
-    ├── 程序员老东/                 # Archived videos
-    │   └── 2025-03-11/
-    └── A股早知道/
+    └── {displayName}/             # Archived videos per account
 ```
 
 **Config resolution order:**
@@ -57,45 +189,9 @@ VidPilot separates **skill** (code, reusable) from **project** (user data, uniqu
 
 ---
 
-## Quick Start
+## Pipeline (Steps 1-8)
 
-```bash
-# 1. Clone skill
-git clone https://github.com/aiyuekuang/vidpilot.git ~/.claude/skills/vidpilot
-
-# 2. Init project (from your project directory)
-cd ~/Desktop/code/my-project
-~/.claude/skills/vidpilot/install.sh .
-
-# 3. Edit vidpilot.json, add images to accounts/{id}/
-
-# 4. Ask Claude to make a video!
-```
-
----
-
-## Account System
-
-All accounts are configured in `vidpilot.json` (in your **project** directory).
-
-**Step 0: Identify Account**
-
-Read `vidpilot.json` to get the account list. Match account by user intent:
-- If unclear, list all accounts and ask user to choose.
-- Once confirmed, use `ACCOUNT={accountId}` for all subsequent commands.
-
----
-
-## Output Directory
-
-```
-{projectDir}/{account.outputDir}/YYYY-MM-DD/
-```
-Stores: video files, scripts, README.md
-
----
-
-## Pipeline
+> Only proceed here AFTER Step 0 passes all checks.
 
 ### Step 1: Collect Hot Topics
 
@@ -197,10 +293,10 @@ VIDPILOT_DIR=~/.claude/skills/vidpilot
 cd $VIDPILOT_DIR
 source .venv/bin/activate
 
-# Generate TTS audio (run from project dir or set VIDPILOT_PROJECT)
+# Generate TTS audio
 VIDPILOT_PROJECT={projectDir} ACCOUNT={accountId} python scripts/generate-audio-{format}.py
 
-# Render video (run from project dir so accounts.ts finds vidpilot.json)
+# Render video
 cd engine
 VIDPILOT_PROJECT={projectDir} npx remotion render {accountId}-{format} ../out/{accountId}-{format}.mp4 --codec h264
 
