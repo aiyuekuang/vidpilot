@@ -315,11 +315,109 @@ Write data files to `{skillDir}/engine/src/data/{accountId}/`. Then run `node sc
 
 **Narration image references**: When generating narration scripts with images, the `segment.image` field should reference filenames that the user has placed in `accounts/{accountId}/images/`. Run `setup-accounts.mjs` after adding images to sync them to `engine/public/`.
 
+---
+
+#### 4.0: Universal Script Writing Principles (ALL FORMATS MUST FOLLOW)
+
+These rules apply to EVERY format. Violating them produces boring, low-engagement content.
+
+**Rule 1: Golden 3-Second Hook (黄金3秒)**
+
+The first line MUST stop the scroll. Use one of these proven hook patterns:
+
+| Hook Type | Template | Example |
+|-----------|----------|---------|
+| Shock value | "[Shocking fact/number]" | "英伟达一天蒸发1500亿美元" |
+| Controversy | "Everyone says X. That's wrong." | "都说程序员要被AI替代，但真相是..." |
+| Mystery | "Did you know...?" | "你知道Meta为什么背叛英伟达吗？" |
+| Direct callout | "If you're [audience], stop!" | "搞AI的注意了，这条消息跟你有关" |
+| FOMO | "Only 1% know this" | "99%的程序员不知道这个提效神器" |
+| Cost/stakes | "This mistake cost $X" | "这个决定让扎克伯格砸了1350亿" |
+| Before/after | "From X to Y" | "从日薪500到月入10万，他只做了一件事" |
+
+**Rule 2: Information Density (大密度、信息点)**
+
+- 30 seconds ~200 chars, 60 seconds ~400 chars
+- ZERO filler words. Every sentence must deliver value or advance the story
+- Cut all "大家好"/"今天我们来聊聊" style openings — dive straight into content
+- Each line should either: deliver a fact, create tension, or trigger emotion
+
+**Rule 3: Conversational Tone (口语化)**
+
+- Write as if talking to a friend, NOT giving a lecture
+- Use short sentences (10-20 chars per line ideal for TTS)
+- Convert all numbers to Chinese (TTS handles Chinese better): "1350亿" → "一千三百五十亿"
+- Use rhetorical questions to create engagement: "你猜怎么着？"
+- Contractions and colloquialisms are GOOD: "不就是"/"搞毛"/"整活"
+
+**Rule 4: Conflict + Reversal (冲突+反转)**
+
+Every script needs at least ONE of these tension patterns:
+
+| Pattern | Structure | Example |
+|---------|-----------|---------|
+| Setup → Reversal | Build expectation, then flip | "芯片强5倍 → 股价反而暴跌" |
+| Problem → Escalate → Twist | Stack problems, surprise exit | "被裁员 → 找不到工作 → 反而年入百万" |
+| Common belief → Debunk | Challenge what everyone thinks | "都说要学Python → 其实学Prompt更值钱" |
+| Comparison → Unexpected winner | Pit two things, surprise result | "GPT-5 vs Claude 4 → 赢的竟然是..." |
+
+**Rule 5: Emotional Arc (情绪曲线)**
+
+Script must NOT be flat. Map emotions across the timeline:
+
+```
+Hook(shock/curiosity) → Build(interest) → Peak(wow/outrage) → Resolve(insight/laugh)
+```
+
+Every 3-4 lines should shift the emotional register. Use expressions and listener reactions to visually reinforce the emotion.
+
+**Rule 6: End Strong, No Filler**
+
+- Last line must be memorable: a punchline, a thought-provoking question, or a surprising conclusion
+- NEVER end with "关注我"/"点赞收藏"/"下期再见" — these kill rewatch rates
+- Leave the audience thinking or laughing
+
+---
+
 #### 4A: Dialogue Script
 
-- 60-90s, 12-18 rounds, 200-350 chars total
-- Per line: 10-22 chars, duration = chars x 7 (frames), min 60, max 200
+**Format specs:**
+- 60-90s, 14-18 rounds, 250-400 chars total
+- Per line: 8-25 chars, duration = chars x 7 (frames), min 48, max 200
 - Expressions: `default` `smile` `laugh` `smug` `shocked` `angry` `cry` `speechless` `confused` `contempt` `shy` `excited` `despair` `evil`
+
+**Dialogue structure — "Comedian + Straight Man" (捧哏+逗哏):**
+
+```
+Act 1: Hook (lines 1-3)     — Left drops a bomb, Right reacts with key info
+Act 2: Escalate (lines 4-8) — Conflict deepens, each line raises stakes
+Act 3: Twist (lines 9-13)   — Unexpected angle, data surprises, "wait what?"
+Act 4: Punchline (lines 14-16) — Deliver insight with humor, memorable ending
+```
+
+**Character dynamics (CRITICAL for engagement):**
+
+| Role | Left (小李/提问者) | Right (老王/回答者) |
+|------|-------------------|-------------------|
+| Personality | Curious, anxious, reactive | Calm, insightful, dry humor |
+| Function | Asks what audience is thinking | Delivers facts with attitude |
+| Tone | "啊？真的假的？" "完蛋了！" | "你先别慌" "这有什么好慌的" |
+| Expression | shocked, confused, cry, excited | smug, laugh, default, evil |
+
+**Writing tricks for dialogue:**
+- Left's questions should mirror what the audience would ask ("那我们是不是要失业了？")
+- Right's answers must be concise facts + attitude, NOT lectures
+- Create "ping-pong rhythm": short question → medium answer → short reaction → longer explanation
+- Use listenerExpression to show the OTHER character's real-time reaction (adds comedy)
+- Include at least 2 "escalation moments" where Left is increasingly shocked/confused
+- Right should occasionally tease Left for comedy ("你这数学是体育老师教的吧")
+
+**Anti-patterns (NEVER do these):**
+- Both characters being calm and informative (boring)
+- Left asking generic questions without emotion ("那后来呢？")
+- Right giving textbook answers without personality ("根据数据显示...")
+- Lines longer than 25 chars (TTS sounds unnatural)
+- No conflict or surprise in the entire script
 
 ```typescript
 import { DialogueLine } from "../../types";
@@ -330,31 +428,79 @@ export const dialogue: DialogueLine[] = [
 
 #### 4B: Slides Script
 
+**Format specs:**
 - Layouts: `cover` `content` `data` `quote` `split` `end`
 - Themes: `"dark"` `"tech"` `"warm"`
 - 30-80 chars narration per slide, 6-10 slides
 
+**Slide structure:**
+```
+Slide 1 (cover):  Hook — one shocking stat or provocative question
+Slide 2-3 (content/data): Core facts — data-driven, each slide ONE key point
+Slide 4-5 (data/split): Comparison — before/after, us/them, old/new
+Slide 6-7 (content/quote): Insight — "what this really means"
+Slide 8 (end): Punchline — memorable takeaway, NOT a generic summary
+```
+
+**Narration style:** Confident narrator voice, each slide's narration is self-contained (makes sense even without seeing previous slides). Use numbers and concrete comparisons instead of vague adjectives.
+
 #### 4C: Ranking Script
 
+**Format specs:**
 - 5-8 items per slide, 1-3 slides
 - Values must have real data sources
 
+**Ranking structure:**
+```
+Opening narration: Set the frame — "Top N [things] that [surprising claim]"
+Items: Countdown order (N to 1) to build anticipation
+#1 reveal: Should be genuinely surprising or counterintuitive
+Closing: One-line insight about what this ranking tells us
+```
+
+**Writing tricks:** Make #1 unexpected. If the audience can guess #1, the ranking is boring. Each item needs a one-line "why" that's memorable ("beats GPT-4 at half the cost").
+
 #### 4D: Code Demo Script
 
+**Format specs:**
 - 3-6 steps, 5-20 lines of code each
 - Code must be real and runnable
 
+**Code demo structure:**
+```
+Step 1: "Here's the problem" — show the pain point in 1-2 sentences
+Step 2: "Watch this" — show the simplest possible solution
+Step 3-4: "But wait" — add real-world complexity, show the elegant fix
+Step 5: "Result" — show it working, explain what just happened
+```
+
+**Narration style:** Tutorial tone but NOT boring. Start with "why you'd care" not "let me explain the syntax." Keep narrations under 30 chars — let the code speak.
+
 #### 4E: Narration Script
 
+**Format specs:**
 - 4-8 segments, text <= 30 chars
 - Effects: `kenburns` `fadeIn` `zoomIn`
 - `image` field is optional: references filename in `accounts/{accountId}/images/`
 - Without images, narration renders with text-only animated backgrounds (still looks good)
 - Do NOT add a closing/follow segment (e.g., "关注XXX" or "点赞收藏"). End with the last content segment.
 
+**Narration structure:**
+```
+Seg 1: Hook — dramatic statement or question (text shown as title card)
+Seg 2-3: Setup — context and background, build the story
+Seg 4-5: Climax — key revelation, data bomb, or turning point
+Seg 6-7: Impact — what this means for the audience
+Seg 8: Takeaway — memorable one-liner conclusion
+```
+
+**Writing tricks:** Each segment narration should work like a "chapter title" — short, punchy, visual. The voiceover does the heavy lifting. Use `kenburns` for photos, `zoomIn` for dramatic reveals, `fadeIn` for transitions.
+
 #### 4F: Article
 
 - 800-2000 chars, 3-6 sections. Save to `/tmp/vidpilot_article.txt`.
+- Structure: Hook paragraph → 3-4 body sections with subheadings → Takeaway
+- Each section should be independently interesting (readers skim)
 
 ---
 
@@ -411,8 +557,22 @@ ffmpeg -y -i {skillDir}/out/{accountId}-{format}.mp4 -i {skillDir}/out/{audioFil
 
 ### Step 7: Title, Tags, Summary
 
-Generate 3 title candidates (15-20 chars, hook in first 5 chars).
-3-5 hashtags. 80-120 char description.
+Generate 3 title candidates using these proven patterns:
+
+| Pattern | Template | Example |
+|---------|----------|---------|
+| Number + shock | "[数字]+[反直觉结论]" | "1500亿蒸发，英伟达慌了" |
+| Question hook | "[悬念问题]？" | "Meta为什么背叛英伟达？" |
+| Conflict frame | "[A]vs[B]，[意外结果]" | "TPU叫板CUDA，老黄坐不住了" |
+| FOMO/exclusive | "[人群]必看/不知道就亏了" | "搞AI的注意了，这消息改变格局" |
+
+Title rules:
+- 15-20 chars, hook in first 5 chars
+- Must contain: a number, a conflict, OR a question
+- NO generic words like "分享"/"解读"/"盘点"
+- Test: if the title works without seeing the video, it's good
+
+3-5 hashtags (mix broad + niche). 80-120 char description (expand on the hook, add 1-2 key facts).
 
 ---
 
