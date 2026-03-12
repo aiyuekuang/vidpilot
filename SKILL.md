@@ -350,6 +350,7 @@ export const dialogue: DialogueLine[] = [
 - Effects: `kenburns` `fadeIn` `zoomIn`
 - `image` field is optional: references filename in `accounts/{accountId}/images/`
 - Without images, narration renders with text-only animated backgrounds (still looks good)
+- Do NOT add a closing/follow segment (e.g., "关注XXX" or "点赞收藏"). End with the last content segment.
 
 #### 4F: Article
 
