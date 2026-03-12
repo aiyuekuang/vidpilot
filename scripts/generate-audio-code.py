@@ -7,7 +7,6 @@
   ACCOUNT=laodong python scripts/generate-audio-code.py
 """
 
-import json
 import os
 import re
 import subprocess
@@ -152,10 +151,10 @@ def main():
     for i, step in enumerate(steps):
         clip_path = os.path.join(clips_dir, f"code_{i:03d}.wav")
         params_infer = ChatTTS.Chat.InferCodeParams(
-            spk_emb=narrator_spk, temperature=0.3, top_P=0.6, top_K=20,
+            spk_emb=narrator_spk, prompt="[speed_9]", temperature=0.3, top_P=0.6, top_K=20,
         )
         params_refine = ChatTTS.Chat.RefineTextParams(
-            prompt="[oral_1][laugh_0][break_5]",
+            prompt="[oral_1][laugh_0][break_2]",
         )
         text = normalize_text(step["narration"])
         wavs = chat.infer([text], params_infer_code=params_infer, params_refine_text=params_refine)

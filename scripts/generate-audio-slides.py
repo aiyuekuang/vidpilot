@@ -10,7 +10,6 @@
   SLIDES_FILE=src/data/laodong/ai-slides.ts python scripts/generate-audio-slides.py
 """
 
-import json
 import os
 import re
 import subprocess
@@ -163,12 +162,13 @@ def main():
         # 语气控制：讲解风格，带轻微停顿
         params_infer = ChatTTS.Chat.InferCodeParams(
             spk_emb=narrator_spk,
+            prompt="[speed_9]",
             temperature=0.3,
             top_P=0.6,
             top_K=20,
         )
         params_refine = ChatTTS.Chat.RefineTextParams(
-            prompt="[oral_2][laugh_0][break_4]",
+            prompt="[oral_1][laugh_0][break_2]",
         )
 
         text = normalize_text(narration)
