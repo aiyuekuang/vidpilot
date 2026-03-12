@@ -113,6 +113,7 @@ export const RemotionRoot: React.FC = () => {
                 segments: data.narration.data,
                 theme: (data.narration.theme || account.defaultTheme) as any,
                 title: account.name,
+                bgm: account.bgm || undefined,
               }}
             />
           );

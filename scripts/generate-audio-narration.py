@@ -22,7 +22,8 @@ import soundfile as sf
 import torch
 
 FPS = 30
-PAD_FRAMES = 20
+LEAD_FRAMES = 25   # silence before speech (let entrance animations finish)
+PAD_FRAMES = 20    # silence after speech (breathing room before next segment)
 
 PUNCT_MAP = str.maketrans({
     '\uff01': '!', '\uff1f': '?', '\uff0c': ',', '\u3002': '.', '\uff1b': ';',
@@ -155,7 +156,7 @@ def main():
         clip_path = os.path.join(clips_dir, f"narr_{i:03d}.wav")
         params_infer = ChatTTS.Chat.InferCodeParams(
             spk_emb=narrator_spk, temperature=0.3, top_P=0.6, top_K=20,
-            prompt="[speed_7]",
+            prompt="[speed_9]",
         )
         params_refine = ChatTTS.Chat.RefineTextParams(
             prompt="[oral_1][laugh_0][break_2]",
@@ -166,18 +167,20 @@ def main():
         sf.write(clip_path, audio_arr, sample_rate, format="WAV", subtype="PCM_16")
 
         dur_s = get_audio_duration(clip_path)
-        frames = math.ceil(dur_s * FPS) + PAD_FRAMES
+        frames = LEAD_FRAMES + math.ceil(dur_s * FPS) + PAD_FRAMES
         clip_durations.append(frames)
         print(f"  [{i+1}/{len(segments)}] {dur_s:.1f}s -> {frames}帧")
 
     print("\n[step] 合并音轨...")
     combined = []
+    lead_samples = int(LEAD_FRAMES / FPS * sample_rate)
+    pad_samples = int(PAD_FRAMES / FPS * sample_rate)
     for i in range(len(segments)):
         clip_path = os.path.join(clips_dir, f"narr_{i:03d}.wav")
         audio_data, sr = sf.read(clip_path)
+        combined.append(np.zeros(lead_samples, dtype=np.float32))  # lead silence
         combined.append(audio_data)
-        pad_samples = int(PAD_FRAMES / FPS * sample_rate)
-        combined.append(np.zeros(pad_samples, dtype=np.float32))
+        combined.append(np.zeros(pad_samples, dtype=np.float32))   # trailing pad
 
     full_audio = np.concatenate(combined)
     os.makedirs(os.path.dirname(output_path), exist_ok=True)

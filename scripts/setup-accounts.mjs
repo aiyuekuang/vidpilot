@@ -245,6 +245,7 @@ for (const acct of accounts) {
     leftCharacter: { name: "${left.name || ""}", image: "${left.image || ""}", imageWidth: ${leftSize[0]}, imageHeight: ${leftSize[1]}, faceCenter: { x: ${leftFace[0]}, y: ${leftFace[1]}, radius: ${leftFace[2]} } },
     rightCharacter: { name: "${right.name || ""}", image: "${right.image || ""}", imageWidth: ${rightSize[0]}, imageHeight: ${rightSize[1]}, faceCenter: { x: ${rightFace[0]}, y: ${rightFace[1]}, radius: ${rightFace[2]} } },
     backgroundImage: "${acct.background || ""}",
+    bgm: "${acct.bgm || ""}",
     defaultTheme: "${acct.theme || "dark"}",
     voiceSeeds: { left: ${acct.tts?.left ?? 42}, right: ${acct.tts?.right ?? 2024}, narrator: ${acct.tts?.narrator ?? 2024} },
     formats: ${JSON.stringify(acct.formats || [])},

@@ -13,32 +13,91 @@ import { NarrationSegment, NarrationProps } from "../types";
 
 const THEMES = {
   dark: {
-    bg: "#0d0d0d",
-    overlay: "linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 60%, rgba(0,0,0,0.95) 100%)",
-    accent: "#7c3aed",
+    bg: "#000000",
+    accent: "#00d4ff",
+    accent2: "#ff6b35",
     title: "#ffffff",
-    body: "rgba(255,255,255,0.9)",
-    muted: "rgba(255,255,255,0.5)",
+    body: "rgba(255,255,255,0.88)",
+    muted: "rgba(255,255,255,0.45)",
+    cardBg: "rgba(255,255,255,0.06)",
+    cardBorder: "rgba(255,255,255,0.1)",
   },
   tech: {
-    bg: "#0f172a",
-    overlay: "linear-gradient(180deg, rgba(15,23,42,0.1) 0%, rgba(15,23,42,0.7) 60%, rgba(15,23,42,0.95) 100%)",
+    bg: "#000000",
     accent: "#06b6d4",
+    accent2: "#a78bfa",
     title: "#ffffff",
-    body: "rgba(255,255,255,0.9)",
-    muted: "rgba(255,255,255,0.5)",
+    body: "rgba(255,255,255,0.88)",
+    muted: "rgba(255,255,255,0.45)",
+    cardBg: "rgba(6,182,212,0.06)",
+    cardBorder: "rgba(6,182,212,0.15)",
   },
   warm: {
-    bg: "#1c1410",
-    overlay: "linear-gradient(180deg, rgba(28,20,16,0.1) 0%, rgba(28,20,16,0.7) 60%, rgba(28,20,16,0.95) 100%)",
+    bg: "#000000",
     accent: "#f59e0b",
+    accent2: "#ef4444",
     title: "#ffffff",
-    body: "rgba(255,255,255,0.9)",
-    muted: "rgba(255,255,255,0.5)",
+    body: "rgba(255,255,255,0.88)",
+    muted: "rgba(255,255,255,0.45)",
+    cardBg: "rgba(245,158,11,0.06)",
+    cardBorder: "rgba(245,158,11,0.15)",
   },
 };
 
-// ── 单段图文渲染 ────────────────────────────────────────────
+// Parse **keyword** markers into segments
+function parseHighlight(
+  text: string,
+  accentColor: string
+): { text: string; highlight: boolean }[] {
+  const parts: { text: string; highlight: boolean }[] = [];
+  const regex = /\*\*(.+?)\*\*/g;
+  let lastIndex = 0;
+  let match;
+  while ((match = regex.exec(text)) !== null) {
+    if (match.index > lastIndex) {
+      parts.push({ text: text.slice(lastIndex, match.index), highlight: false });
+    }
+    parts.push({ text: match[1], highlight: true });
+    lastIndex = match.index + match[0].length;
+  }
+  if (lastIndex < text.length) {
+    parts.push({ text: text.slice(lastIndex), highlight: false });
+  }
+  return parts;
+}
+
+// Render text with highlighted keywords
+const HighlightedText: React.FC<{
+  text: string;
+  accentColor: string;
+  fontSize: number;
+  fontFamily: string;
+  color: string;
+  lineHeight?: number;
+  fontWeight?: number;
+  textAlign?: React.CSSProperties["textAlign"];
+}> = ({ text, accentColor, fontSize, fontFamily, color, lineHeight = 1.5, fontWeight = 800, textAlign = "center" }) => {
+  // Split by newlines first
+  const lines = text.split("\n");
+  return (
+    <div style={{ fontSize, fontFamily, color, lineHeight, fontWeight, textAlign }}>
+      {lines.map((line, li) => (
+        <React.Fragment key={li}>
+          {li > 0 && <br />}
+          {parseHighlight(line, accentColor).map((part, pi) =>
+            part.highlight ? (
+              <span key={pi} style={{ color: accentColor }}>{part.text}</span>
+            ) : (
+              <span key={pi}>{part.text}</span>
+            )
+          )}
+        </React.Fragment>
+      ))}
+    </div>
+  );
+};
+
+// -- Single segment renderer --
 interface SingleSegmentProps {
   segment: NarrationSegment;
   localFrame: number;
@@ -46,6 +105,9 @@ interface SingleSegmentProps {
   isPortrait: boolean;
   width: number;
   height: number;
+  fps: number;
+  segmentIndex: number;
+  totalSegments: number;
 }
 
 const SingleSegment: React.FC<SingleSegmentProps> = ({
@@ -55,33 +117,90 @@ const SingleSegment: React.FC<SingleSegmentProps> = ({
   isPortrait,
   width,
   height,
+  fps,
+  segmentIndex,
+  totalSegments,
 }) => {
-  const fs = isPortrait ? 1 : 0.7;
   const fontFamily = "PingFang SC, Noto Sans SC, Microsoft YaHei, sans-serif";
-  const effect = segment.effect || "kenburns";
+  const hasImage = !!segment.image;
+  const isFirst = segmentIndex === 0;
+  const isLast = segmentIndex === totalSegments - 1;
 
-  // 入场淡入
-  const enterOpacity = interpolate(localFrame, [0, 15], [0, 1], {
-    extrapolateRight: "clamp",
+  // Title spring entrance (from bottom)
+  const titleSpring = spring({
+    frame: localFrame,
+    fps,
+    config: { damping: 14, stiffness: 120 },
+    durationInFrames: 25,
   });
+  const titleY = interpolate(titleSpring, [0, 1], [80, 0]);
+  const titleOpacity = titleSpring;
 
-  // Ken Burns 效果参数
+  // Subtitle delayed entrance
+  const subtitleSpring = spring({
+    frame: Math.max(0, localFrame - 10),
+    fps,
+    config: { damping: 14, stiffness: 100 },
+    durationInFrames: 25,
+  });
+  const subtitleOpacity = subtitleSpring;
+  const subtitleY = interpolate(subtitleSpring, [0, 1], [40, 0]);
+
+  // Narration caption - split into sentences, show one at a time
+  // LEAD_FRAMES: silence at start of each segment for entrance animations
+  const LEAD_FRAMES = 25;
+  const sentences = (segment.narration || "")
+    .split(/(?<=[。！？!?])/)
+    .map((s) => s.trim())
+    .filter((s) => s.length > 0);
+  const sentenceCount = sentences.length || 1;
+  // Speech starts after LEAD_FRAMES; allocate remaining frames by char count
+  const speechFrames = Math.max(segment.duration - LEAD_FRAMES, 1);
+  const totalChars = sentences.reduce((sum, s) => sum + s.length, 0) || 1;
+  const sentenceFramesList = sentences.map(
+    (s) => (s.length / totalChars) * speechFrames
+  );
+  const sentenceStarts = sentenceFramesList.reduce<number[]>(
+    (acc, f, i) => [
+      ...acc,
+      LEAD_FRAMES + (i === 0 ? 0 : acc[i - 1] - LEAD_FRAMES + sentenceFramesList[i - 1]),
+    ],
+    []
+  );
+  const currentSentenceIdx =
+    localFrame < LEAD_FRAMES
+      ? 0
+      : Math.min(
+          sentenceStarts.findLastIndex((start) => localFrame >= start),
+          sentenceCount - 1
+        );
+  const currentSentence = sentences[Math.max(0, currentSentenceIdx)] || "";
+  // No fade-in: caption appears instantly to stay in sync with audio
+  const captionOpacity = localFrame < LEAD_FRAMES ? 0 : 1;
+
+  // Image entrance from bottom (delayed)
+  const imageSpring = spring({
+    frame: Math.max(0, localFrame - 18),
+    fps,
+    config: { damping: 16, stiffness: 90 },
+    durationInFrames: 30,
+  });
+  const imageY = interpolate(imageSpring, [0, 1], [120, 0]);
+  const imageOpacity = imageSpring;
+
+  // Slow Ken Burns on the image card
   const progress = localFrame / Math.max(segment.duration, 1);
-  let imgTransform = "";
-  if (effect === "kenburns") {
-    const scale = interpolate(progress, [0, 1], [1.0, 1.15]);
-    const tx = interpolate(progress, [0, 1], [0, -2]);
-    const ty = interpolate(progress, [0, 1], [0, -1]);
-    imgTransform = `scale(${scale}) translate(${tx}%, ${ty}%)`;
-  } else if (effect === "zoomIn") {
-    const scale = interpolate(progress, [0, 1], [1.2, 1.0]);
-    imgTransform = `scale(${scale})`;
-  }
+  const imgScale = interpolate(progress, [0, 1], [1.0, 1.08]);
 
-  // 文字整句淡入显示
-  const textOpacity = interpolate(localFrame, [0, 20], [0, 1], {
+  // Decorative accent line animation
+  const lineWidth = interpolate(localFrame, [5, 25], [0, 120], {
     extrapolateRight: "clamp",
+    extrapolateLeft: "clamp",
   });
+
+  // Number badge for non-first/last segments
+  const showNumber = !isFirst && !isLast;
+  const numberText = `0${segmentIndex}`;
 
   return (
     <div
@@ -89,88 +208,108 @@ const SingleSegment: React.FC<SingleSegmentProps> = ({
         width: "100%",
         height: "100%",
         position: "relative",
-        opacity: enterOpacity,
+        background: theme.bg,
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        justifyContent: hasImage ? "flex-start" : "center",
+        overflow: "hidden",
       }}
     >
-      {/* 背景图 */}
-      {segment.image ? (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            overflow: "hidden",
-          }}
-        >
-          <Img
-            src={staticFile(segment.image)}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              transform: imgTransform,
-            }}
-          />
-        </div>
-      ) : (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            background: theme.bg,
-          }}
-        />
-      )}
-
-      {/* 渐变遮罩 */}
+      {/* Subtle gradient glow at top */}
       <div
         style={{
           position: "absolute",
-          inset: 0,
-          background: segment.image ? theme.overlay : "transparent",
+          top: -200,
+          left: "50%",
+          transform: "translateX(-50%)",
+          width: 600,
+          height: 400,
+          borderRadius: "50%",
+          background: `radial-gradient(circle, ${theme.accent}15 0%, transparent 70%)`,
+          opacity: titleOpacity,
         }}
       />
 
-      {/* 文字内容区 */}
+      {/* Text content area */}
       <div
         style={{
-          position: "absolute",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          padding: isPortrait ? "0 48px 120px" : "0 60px 80px",
+          position: "relative",
+          zIndex: 2,
           display: "flex",
           flexDirection: "column",
-          gap: 16,
+          alignItems: "center",
+          paddingTop: hasImage
+            ? isPortrait ? 140 : 80
+            : isPortrait ? 400 : 250,
+          paddingLeft: isPortrait ? 48 : 60,
+          paddingRight: isPortrait ? 48 : 60,
+          width: "100%",
+          boxSizing: "border-box",
         }}
       >
-        {/* 主文字 */}
+        {/* Number badge */}
+        {showNumber && (
+          <div
+            style={{
+              opacity: titleOpacity,
+              transform: `translateY(${titleY}px)`,
+              marginBottom: 20,
+              fontSize: isPortrait ? 28 : 20,
+              fontWeight: 700,
+              fontFamily,
+              color: theme.accent,
+              letterSpacing: 4,
+            }}
+          >
+            {numberText}
+          </div>
+        )}
+
+        {/* Main title */}
         <div
           style={{
-            fontSize: fs * (segment.image ? 48 : 56),
-            fontWeight: 800,
-            color: theme.title,
-            fontFamily,
-            lineHeight: 1.5,
-            textShadow: segment.image ? "0 2px 20px rgba(0,0,0,0.8)" : "none",
-            opacity: textOpacity,
+            opacity: titleOpacity,
+            transform: `translateY(${titleY}px)`,
           }}
         >
-          {segment.text}
+          <HighlightedText
+            text={segment.text}
+            accentColor={theme.accent}
+            fontSize={isPortrait ? 60 : 44}
+            fontFamily={fontFamily}
+            color={theme.title}
+            fontWeight={800}
+            lineHeight={1.45}
+          />
         </div>
 
-        {/* 副标题/来源 */}
+        {/* Accent line under title */}
+        <div
+          style={{
+            width: lineWidth,
+            height: 4,
+            background: `linear-gradient(90deg, transparent, ${theme.accent}, transparent)`,
+            borderRadius: 2,
+            marginTop: 28,
+            marginBottom: 20,
+            opacity: titleOpacity,
+          }}
+        />
+
+        {/* Subtitle */}
         {segment.subtitle && (
           <div
             style={{
-              fontSize: fs * 20,
+              opacity: subtitleOpacity,
+              transform: `translateY(${subtitleY}px)`,
+              fontSize: isPortrait ? 26 : 18,
               color: theme.muted,
               fontFamily,
-              opacity: interpolate(
-                localFrame,
-                [15, 30],
-                [0, 1],
-                { extrapolateRight: "clamp", extrapolateLeft: "clamp" }
-              ),
+              fontWeight: 400,
+              textAlign: "center",
+              lineHeight: 1.6,
+              maxWidth: isPortrait ? 900 : 700,
             }}
           >
             {segment.subtitle}
@@ -178,25 +317,87 @@ const SingleSegment: React.FC<SingleSegmentProps> = ({
         )}
       </div>
 
-      {/* 左侧竖线装饰 */}
-      {!segment.image && (
+      {/* Image card (middle area) */}
+      {hasImage && (
         <div
           style={{
             position: "absolute",
-            left: isPortrait ? 32 : 44,
-            top: "30%",
-            bottom: "30%",
-            width: 4,
-            background: `linear-gradient(180deg, transparent, ${theme.accent}, transparent)`,
-            borderRadius: 2,
+            top: "50%",
+            left: "50%",
+            transform: `translate(-50%, -50%) translateY(${isPortrait ? 60 : 40}px) translateY(${imageY}px)`,
+            opacity: imageOpacity,
+            width: isPortrait ? width - 96 : width - 120,
+            height: isPortrait ? 480 : 320,
+            borderRadius: 20,
+            overflow: "hidden",
+            border: `1px solid ${theme.cardBorder}`,
+            boxShadow: `0 20px 60px rgba(0,0,0,0.5), 0 0 40px ${theme.accent}10`,
           }}
-        />
+        >
+          <Img
+            src={staticFile(segment.image!)}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              transform: `scale(${imgScale})`,
+            }}
+          />
+          {/* Subtle gradient overlay on image */}
+          <div
+            style={{
+              position: "absolute",
+              inset: 0,
+              background: `linear-gradient(180deg, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.3) 100%)`,
+            }}
+          />
+        </div>
+      )}
+
+      {/* Narration caption (bottom) */}
+      {segment.narration && (
+        <div
+          style={{
+            position: "absolute",
+            bottom: isPortrait ? 220 : 100,
+            left: 0,
+            right: 0,
+            display: "flex",
+            justifyContent: "center",
+            zIndex: 5,
+            padding: isPortrait ? "0 40px" : "0 50px",
+            opacity: captionOpacity,
+          }}
+        >
+          <div
+            style={{
+              background: "rgba(0,0,0,0.7)",
+              backdropFilter: "blur(8px)",
+              padding: isPortrait ? "16px 28px" : "12px 24px",
+              borderRadius: 14,
+              maxWidth: isPortrait ? width - 80 : width - 100,
+            }}
+          >
+            <span
+              style={{
+                fontSize: isPortrait ? 38 : 26,
+                fontWeight: 500,
+                color: "rgba(255,255,255,0.92)",
+                fontFamily,
+                lineHeight: 1.7,
+                letterSpacing: 0.5,
+              }}
+            >
+              {currentSentence}
+            </span>
+          </div>
+        </div>
       )}
     </div>
   );
 };
 
-// ── 主组件 ────────────────────────────────────────────────────
+// -- Main component --
 export const NarrationScene: React.FC<NarrationProps> = ({
   segments = [],
   theme: themeName = "dark",
@@ -205,7 +406,7 @@ export const NarrationScene: React.FC<NarrationProps> = ({
 }) => {
   if (segments.length === 0) return null;
   const frame = useCurrentFrame();
-  const { width, height } = useVideoConfig();
+  const { width, height, fps } = useVideoConfig();
   const isPortrait = height > width;
   const theme = THEMES[themeName] || THEMES.dark;
 
@@ -238,23 +439,24 @@ export const NarrationScene: React.FC<NarrationProps> = ({
         background: theme.bg,
       }}
     >
+      {/* Page turn SFX */}
       {pageTurnFrames.map((f, i) => (
         <Sequence key={i} from={f} durationInFrames={15}>
           <Audio src={staticFile("sfx/ding.wav")} volume={0.15} />
         </Sequence>
       ))}
 
-      {/* 背景音乐 */}
+      {/* BGM */}
       {bgm && (
         <Audio src={staticFile(`music/${bgm}`)} volume={0.08} loop />
       )}
 
-      {/* 顶部水印 */}
+      {/* Watermark title */}
       {title && (
         <div
           style={{
             position: "absolute",
-            top: isPortrait ? 40 : 20,
+            top: isPortrait ? 50 : 20,
             left: 0,
             right: 0,
             display: "flex",
@@ -264,14 +466,16 @@ export const NarrationScene: React.FC<NarrationProps> = ({
         >
           <span
             style={{
-              background: "rgba(0,0,0,0.5)",
-              padding: "8px 28px",
-              borderRadius: 20,
-              color: "rgba(255,255,255,0.7)",
+              background: "rgba(255,255,255,0.06)",
+              backdropFilter: "blur(10px)",
+              padding: "10px 32px",
+              borderRadius: 24,
+              border: "1px solid rgba(255,255,255,0.08)",
+              color: "rgba(255,255,255,0.6)",
               fontSize: isPortrait ? 24 : 16,
               fontFamily: "PingFang SC, Microsoft YaHei, sans-serif",
               fontWeight: 600,
-              letterSpacing: 2,
+              letterSpacing: 3,
             }}
           >
             {title}
@@ -279,7 +483,7 @@ export const NarrationScene: React.FC<NarrationProps> = ({
         </div>
       )}
 
-      {/* 内容区 */}
+      {/* Content */}
       <div style={{ position: "absolute", inset: 0 }}>
         {currentSegment && (
           <SingleSegment
@@ -289,15 +493,18 @@ export const NarrationScene: React.FC<NarrationProps> = ({
             isPortrait={isPortrait}
             width={width}
             height={height}
+            fps={fps}
+            segmentIndex={currentIdx}
+            totalSegments={segments.length}
           />
         )}
       </div>
 
-      {/* 页码指示器 */}
+      {/* Page indicators */}
       <div
         style={{
           position: "absolute",
-          bottom: isPortrait ? 28 : 14,
+          bottom: isPortrait ? 36 : 18,
           left: 0,
           right: 0,
           display: "flex",
@@ -310,39 +517,33 @@ export const NarrationScene: React.FC<NarrationProps> = ({
           <div
             key={i}
             style={{
-              width:
-                i === currentIdx
-                  ? isPortrait
-                    ? 28
-                    : 20
-                  : isPortrait
-                  ? 8
-                  : 6,
-              height: isPortrait ? 8 : 6,
+              width: i === currentIdx ? 28 : 8,
+              height: 8,
               borderRadius: 4,
               background:
-                i === currentIdx ? theme.accent : "rgba(255,255,255,0.25)",
+                i === currentIdx ? theme.accent : "rgba(255,255,255,0.15)",
+              transition: "width 0.3s",
             }}
           />
         ))}
       </div>
 
-      {/* 进度条 */}
+      {/* Progress bar */}
       <div
         style={{
           position: "absolute",
           bottom: 0,
           left: 0,
           right: 0,
-          height: 4,
-          background: "rgba(255,255,255,0.08)",
+          height: 3,
+          background: "rgba(255,255,255,0.05)",
         }}
       >
         <div
           style={{
             height: "100%",
             width: `${(frame / totalDuration) * 100}%`,
-            background: `linear-gradient(90deg, ${theme.accent}, ${theme.accent}cc)`,
+            background: `linear-gradient(90deg, ${theme.accent}, ${theme.accent}aa)`,
             borderRadius: "0 2px 2px 0",
           }}
         />

@@ -115,7 +115,7 @@ export interface CodeDemoProps {
 
 export interface NarrationSegment {
   image?: string;             // 图片文件名（public/ 下），可选
-  text: string;               // 画面上叠加的文字
+  text: string;               // 画面文字，用 **关键词** 标记高亮
   subtitle?: string;          // 副标题/来源
   narration: string;          // 旁白文本
   duration: number;           // 帧数
@@ -140,6 +140,7 @@ export interface AccountConfig {
   leftCharacter: CharacterConfig;
   rightCharacter: CharacterConfig;
   backgroundImage: string;      // 对话动画背景图
+  bgm: string;                  // BGM 文件名（public/music/ 下），空字符串=无BGM
   defaultTheme: ThemeName;      // 默认主题
   voiceSeeds: {
     left: number;               // 左角色 ChatTTS seed
