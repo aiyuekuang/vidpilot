@@ -2,7 +2,7 @@
 
 English | [中文](README.zh.md)
 
-AI-powered short video automation skill for [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
+AI-powered short video automation skill for [Claude Code](https://docs.anthropic.com/en/docs/claude-code) and [OpenClaw](https://github.com/OpenClaw-AI/openclaw).
 
 Turn trending topics into engaging short videos with 5 different formats — all rendered locally, no cloud APIs needed.
 
@@ -98,7 +98,7 @@ See [config.example.json](config.example.json) for the full schema.
 - **Node.js** >= 18
 - **Python** >= 3.10 (for TTS)
 - **FFmpeg** (for audio post-processing and video merging)
-- **Claude Code** (to use as a skill)
+- **Claude Code** or **OpenClaw** (to use as a skill)
 
 ## Adding a New Account
 

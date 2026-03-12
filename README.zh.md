@@ -2,7 +2,7 @@
 
 [English](README.md) | 中文
 
-AI 驱动的短视频自动化 Skill，专为 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 设计。
+AI 驱动的短视频自动化 Skill，支持 [Claude Code](https://docs.anthropic.com/en/docs/claude-code) 和 [OpenClaw](https://github.com/OpenClaw-AI/openclaw)。
 
 将热门话题一键转化为精彩短视频，支持 5 种视频格式，全程本地渲染，无需云端 API。
 
@@ -98,7 +98,7 @@ vidpilot/
 - **Node.js** >= 18
 - **Python** >= 3.10（用于 TTS）
 - **FFmpeg**（用于音频后处理和视频合并）
-- **Claude Code**（作为 Skill 使用）
+- **Claude Code** 或 **OpenClaw**（作为 Skill 运行器）
 
 ## 添加新账号
 
