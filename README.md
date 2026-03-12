@@ -1,5 +1,7 @@
 # VidPilot
 
+English | [中文](README.zh.md)
+
 AI-powered short video automation skill for [Claude Code](https://docs.anthropic.com/en/docs/claude-code).
 
 Turn trending topics into engaging short videos with 5 different formats — all rendered locally, no cloud APIs needed.

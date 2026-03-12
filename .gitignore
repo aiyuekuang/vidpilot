@@ -9,3 +9,12 @@ engine/src/data/*/
 !engine/src/data/example/
 !engine/src/data/registry.example.ts
 engine/src/data/registry.ts
+engine/src/accounts.ts
+cookies/
+asset/
+engine/public/music/
+engine/public/*.jpg
+engine/public/*.jpeg
+engine/public/*.webp
+engine/public/*.png
+!engine/public/sfx/
