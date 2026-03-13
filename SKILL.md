@@ -826,7 +826,19 @@ Title rules:
 
 ---
 
-### Step 8: Archive
+### Step 8: Generate Cover + Archive
+
+**8.1 生成封面（必须）**
+
+选定标题后，**必须**生成封面图再归档。封面用于发布时的视频封面。
+
+```bash
+cd {skillDir}
+source .venv/bin/activate
+python scripts/generate-thumbnail.py "{标题}" {projectDir}/output/{accountId}/YYYY-MM-DD/{video-title}/{video-title}_cover.png
+```
+
+**8.2 归档**
 
 Each video gets its own subdirectory under the date folder, named by video title:
 
@@ -834,9 +846,21 @@ Each video gets its own subdirectory under the date folder, named by video title
 {projectDir}/output/{accountId}/YYYY-MM-DD/
   └── [video-title]/
       ├── [video-title].mp4
-      ├── [video-title]_cover.png
+      ├── [video-title]_cover.png    ← 封面图（Step 8.1 生成）
       ├── [data-file].ts
       └── meta.txt          # title, tags, description
+```
+
+**8.3 发布（用户确认后执行）**
+
+归档完成后询问用户是否发布。发布时**必须带封面**：
+
+```bash
+python scripts/publish-douyin.py \
+  --video {video-path} \
+  --title "{标题}" \
+  --tags "{tag1},{tag2},..." \
+  --thumbnail {cover-path}
 ```
 
 ---
