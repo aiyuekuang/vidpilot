@@ -364,6 +364,57 @@ WebSearch for core data, hot discussions, different viewpoints on the topic.
 
 ---
 
+### Step 3.5: Knowledge Base Reference (知识库参考)
+
+生成脚本前，**必须**检查并加载当前账号的知识库，确保脚本中的产品/服务描述准确专业。
+
+**加载知识库：**
+
+```bash
+ls {CWD}/accounts/{accountId}/text/
+```
+
+如果 `text/` 目录存在且有文件，读取所有文档：
+
+```bash
+# 读取所有知识库文件
+cat {CWD}/accounts/{accountId}/text/*.md
+cat {CWD}/accounts/{accountId}/text/*.txt
+```
+
+**知识库内容类型：**
+
+| 文件类型 | 典型内容 | 用途 |
+|---------|---------|------|
+| 产品介绍 | 核心产品名称、型号、功能、参数 | 脚本中提到产品时必须准确 |
+| 服务说明 | 服务流程、解决方案、应用场景 | 确保场景描述真实可信 |
+| 行业术语 | 专业名词、缩写、标准解释 | 避免用错术语，保持专业性 |
+| 品牌规范 | 品牌话术、禁用词、宣传口径 | 遵守品牌合规要求 |
+| 客户案例 | 真实案例、数据、客户反馈 | 增强内容可信度和说服力 |
+| FAQ | 常见问题与标准回答 | 回应用户可能的疑问 |
+
+**使用原则：**
+
+1. **准确优先**：知识库中的产品名称、参数、数据优先于网上搜索结果
+2. **自然融入**：不要生硬堆砌产品信息，要结合话题自然引出
+3. **不过度营销**：遵守 vidpilot.json 中 `style.taboos` 的禁忌规则
+4. **场景化表达**：用知识库中的真实案例/场景替代空泛描述
+5. **术语一致**：全脚本使用统一的专业术语，不混用
+
+**示例 — plasmalab 账号：**
+
+```
+知识库: text/产品手册.md 中提到 "PlasmaLab 等离子体处理指示卡，型号 PL-100"
+话题: "等离子清洗效果怎么检测"
+
+✗ 错误: "用一种卡片就能检测" （模糊、不专业）
+✓ 正确: "PlasmaLab 等离子体处理指示卡，往上面一放，颜色变了就知道处理到位没" （准确+口语化）
+```
+
+**如果 text/ 目录为空或不存在** → 跳过此步，仅依赖 Step 3 的网络调研。
+
+---
+
 ### Step 4: Generate Script
 
 Write data files to `{skillDir}/engine/src/data/{accountId}/`. Then run `node scripts/setup-accounts.mjs {projectDir}` to regenerate registry.ts.
