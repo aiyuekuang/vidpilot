@@ -61,8 +61,13 @@ After user provides account info, show them exactly what you will create and ask
 > │   └── right.png     # Right character
 > ├── backgrounds/      # 背景图 (dialogue format)
 > │   └── bg.png        # Default background (1080x1920 for vertical video)
-> └── images/           # 每期配图 (narration format, add per-video)
+> ├── images/           # 用户自有素材图片（产品图、实拍图等，可选）
+> ├── text/             # 知识库文档（产品资料、行业术语等，可选）
+> ├── video/            # 用户自有视频素材（产品视频等，可选）
+> └── music/            # BGM 音乐文件（可选）
 > ```
+>
+> - `output/{accountId}/images/` — per-video images (narration format, generated/fetched assets)
 >
 > - `output/{displayName}/` — rendered videos will be archived here by date
 >
@@ -73,12 +78,12 @@ After user provides account info, show them exactly what you will create and ask
 > | slides | None (auto-rendered with colors + emoji) | - |
 > | ranking | None (auto-rendered with colors + emoji) | - |
 > | code | None (auto-rendered code blocks) | - |
-> | narration | Optional per-segment images | `images/` (add before each video) |
+> | narration | Optional per-segment images | `output/{accountId}/images/` (add before each video) |
 >
 > **How it works:**
 > 1. Put character images in `accounts/{accountId}/characters/` (one-time setup)
 > 2. Tell me "make a video" and I'll find hot topics, write scripts, generate audio, and render video
-> 3. For narration videos, add topic-related images to `accounts/{accountId}/images/` before rendering
+> 3. For narration videos, images are fetched/placed in `output/{accountId}/images/` before rendering
 > 4. Final videos appear in `output/{displayName}/YYYY-MM-DD/`
 >
 > Shall I proceed?
@@ -93,8 +98,8 @@ Once confirmed:
 2. Run `node {skillDir}/scripts/setup-accounts.mjs {projectDir}` — this auto-creates:
    - `accounts/{accountId}/characters/`
    - `accounts/{accountId}/backgrounds/`
-   - `accounts/{accountId}/images/`
-   - `output/{displayName}/`
+   - `output/{accountId}/images/`
+   - `output/{accountId}/`
    - `engine/src/data/{accountId}/` (in skill dir)
 
 Then tell user:
@@ -108,7 +113,7 @@ Then tell user:
 > 4. Update `vidpilot.json` → `characters` section with correct filenames, image dimensions, and face center coordinates
 >
 > **Per-video setup** (only for narration format):
-> - Add topic-related images to `accounts/{accountId}/images/` before generating narration videos
+> - Images are fetched/placed in `output/{accountId}/images/` before generating narration videos
 > - These images are referenced by filename in the narration script's `image` field
 >
 > **No images needed** for slides, ranking, and code formats — they render automatically!
@@ -144,7 +149,7 @@ For the selected account, check that required images exist in the correct subdir
 ```bash
 ls {CWD}/accounts/{accountId}/characters/
 ls {CWD}/accounts/{accountId}/backgrounds/
-ls {CWD}/accounts/{accountId}/images/
+ls {CWD}/output/{accountId}/images/
 ```
 
 Check for files referenced in vidpilot.json:
@@ -180,15 +185,15 @@ node {skillDir}/scripts/setup-accounts.mjs {CWD}
 
 When the selected format is **narration** and the script references images (`segment.image`):
 
-1. Check if referenced images exist in `accounts/{accountId}/images/`
+1. Check if referenced images exist in `output/{accountId}/images/`
 2. If missing, tell user:
 
-> This narration script references images that aren't in `accounts/{accountId}/images/` yet:
+> This narration script references images that aren't in `output/{accountId}/images/` yet:
 > - `{filename1}` — for segment "{segment text}"
 > - `{filename2}` — for segment "{segment text}"
 >
 > Options:
-> 1. Add the images to `accounts/{accountId}/images/` and tell me when ready
+> 1. Add the images to `output/{accountId}/images/` and tell me when ready
 > 2. I can generate the script without images (text-only narration, still looks good)
 > 3. I can use AI to generate placeholder images (requires image generation tool)
 
@@ -200,6 +205,57 @@ If the user says "add a new account" or "create another channel":
 2. Read existing `vidpilot.json`, add the new account to the `accounts` object
 3. Run `setup-accounts.mjs` to create all subdirectories and regenerate registry
 4. Tell user which subdirectories were created and what to put in each
+
+### 0.7 Asset Naming Audit (MUST DO before every video)
+
+Before proceeding to the pipeline, scan ALL asset files in `accounts/{accountId}/` and check if filenames are **descriptive Chinese names** (not hash strings, UUIDs, or generic names like `IMG_001.jpg`).
+
+**Why:** Descriptive filenames enable smart image matching in Step 4 — the script generator uses filenames to pick the right image for each segment.
+
+**Detection rules — a file needs renaming if:**
+- Filename is a hash/UUID pattern: `/^[0-9a-f]{6,}/i` (e.g., `8001a3f2b4.jpg`)
+- Filename is generic: `IMG_`, `DSC_`, `photo_`, `image_`, `screenshot_`, numbered sequences
+- Filename has no Chinese characters and no semantic English description
+
+**Audit procedure:**
+
+```bash
+ls {CWD}/accounts/{accountId}/images/
+ls {CWD}/accounts/{accountId}/video/
+# Also check text/, music/ if they exist
+```
+
+**If files need renaming:**
+
+1. **Images**: Use Claude's visual recognition — read each image file directly, describe the content in Chinese, generate a semantic filename:
+   - Format: `{中文描述}-{序号}.{ext}` (e.g., `等离子喷嘴工作中-01.jpg`, `达因笔测试.jpg`)
+   - Keep names concise (2-8 Chinese chars + optional sequence number)
+   - Avoid generic descriptions ("图片"/"照片"), be specific about content
+
+2. **Videos**: Extract a keyframe with ffmpeg, then visually identify:
+   ```bash
+   ffmpeg -i {video_path} -vf "select=eq(n\,30)" -frames:v 1 -f image2 /tmp/vp-frame-{name}.jpg
+   ```
+   Read the extracted frame, describe the content, rename accordingly.
+
+3. **Text files**: Read first few lines, name by content topic.
+
+4. **Music files**: Name by mood/genre if identifiable from filename or metadata.
+
+**After renaming, report to user:**
+
+> 素材命名检查完成：
+>
+> | 原文件名 | 新文件名 | 内容描述 |
+> |---------|---------|---------|
+> | `8001a3f2.jpg` | `等离子喷嘴工作中-01.jpg` | 等离子喷嘴发出紫色光芒 |
+> | ... | ... | ... |
+>
+> 已重命名 {N} 个文件。如需调整请告诉我。
+
+**If ALL files already have descriptive names** -> skip and proceed.
+
+**IMPORTANT:** If any image/video references in existing data files (`.ts`) use old filenames, update those references too.
 
 ---
 
@@ -231,23 +287,31 @@ VidPilot separates **skill** (code, reusable) from **project** (user data, uniqu
 
 {CWD}/                             # PROJECT (user data, not in skill repo)
 ├── vidpilot.json                  # Account config (user creates/edits)
-├── accounts/
+├── accounts/                      # User-provided static assets (persistent)
 │   └── {accountId}/
 │       ├── characters/            # Character images (one-time, dialogue format)
 │       ├── backgrounds/           # Background images (one-time, dialogue format)
-│       └── images/                # Per-video images (narration format)
+│       ├── images/                # User's own images (product photos, etc.)
+│       ├── text/                  # Knowledge base (product docs, terminology)
+│       ├── video/                 # User's own video assets
+│       └── music/                 # BGM music files
 └── output/
-    └── {displayName}/             # Archived videos per account
-        └── YYYY-MM-DD/
+    └── {accountId}/               # Per-account output & working files
+        ├── images/                # Per-video images (narration format, fetched/generated)
+        └── YYYY-MM-DD/            # Archived videos
 ```
 
 **Asset subdirectory roles:**
 
 | Directory | Used By | Frequency | Description |
 |-----------|---------|-----------|-------------|
-| `characters/` | dialogue | One-time setup | Left/right character PNGs, transparent bg recommended |
-| `backgrounds/` | dialogue | One-time setup | 1080x1920 vertical background |
-| `images/` | narration | Per-video | Topic images referenced in narration script's `segment.image` |
+| `accounts/{id}/characters/` | dialogue | One-time setup | Left/right character PNGs, transparent bg recommended |
+| `accounts/{id}/backgrounds/` | dialogue | One-time setup | 1080x1920 vertical background |
+| `accounts/{id}/images/` | all | User-provided | Product photos, brand images (user's own, persistent) |
+| `accounts/{id}/text/` | all | User-provided | Knowledge base docs, terminology, product descriptions |
+| `accounts/{id}/video/` | all | User-provided | Product videos, reference clips |
+| `accounts/{id}/music/` | all | User-provided | BGM music files |
+| `output/{id}/images/` | narration | Per-video | Topic images fetched/generated for narration `segment.image` |
 | _(none needed)_ | slides, ranking, code | - | Auto-rendered, no external images |
 
 **Config resolution order:**
@@ -278,14 +342,17 @@ Pick the best topic for the account. Auto-detect format:
 
 | Topic Pattern | Format | Example |
 |---------------|--------|---------|
-| Controversy, humor, emotional | **dialogue** | AI drama, industry gossip |
-| Quick explainer, data comparison | **slides** | Salary rankings, tool comparison |
 | Rankings, benchmarks, TOP-N | **ranking** | AI tool TOP5, benchmark scores |
 | Code tutorial, API demo | **code** | Installation guide, code tricks |
-| News report, visual storytelling | **narration** | Product launch, event timeline |
+| News report, events, product launch, data story | **narration** | 重磅发布、政策影响、行业事件 |
+| Quick explainer, data comparison, how-to | **slides** | 工资对比、工具评测、技巧总结 |
+| Controversy, humor, emotional banter | **dialogue** | AI drama, industry gossip |
 | Deep tutorial, detailed guide | **article** | Full tutorial, deep comparison |
 
-**Priority**: ranking > code > dialogue > slides > narration > article
+**Priority**: ranking > code > narration > slides > dialogue > article
+
+> narration 是图文主格式，凡有"事件感"（谁做了什么、发生了什么）的话题优先选 narration。
+> Only select formats allowed by the account's `formats` config.
 
 > Only select formats allowed by the account's `formats` config.
 
@@ -313,7 +380,39 @@ Write data files to `{skillDir}/engine/src/data/{accountId}/`. Then run `node sc
 
 **Character names come from vidpilot.json** (not hardcoded in data files).
 
-**Narration image references**: When generating narration scripts with images, the `segment.image` field should reference filenames that the user has placed in `accounts/{accountId}/images/`. Run `setup-accounts.mjs` after adding images to sync them to `engine/public/`.
+**Narration image references**: When generating narration scripts with images, the `segment.image` field should reference filenames in `output/{accountId}/images/` or `accounts/{accountId}/images/`. Use `fetch-images.mjs --account {accountId}` to fetch images, or place them manually. Run `setup-accounts.mjs` after to sync them to `engine/public/`.
+
+**Smart Image Matching (narration + slides 格式):**
+
+生成脚本时，根据图片的**描述性文件名**自动匹配最合适的图片插入每个 segment。
+
+1. **列出可用图片**：扫描两个来源的图片：
+   - `accounts/{accountId}/images/` — 用户自有素材（产品图、实拍图等）
+   - `output/{accountId}/images/` — 每期获取的主题图片
+   ```bash
+   ls {CWD}/accounts/{accountId}/images/
+   ls {CWD}/output/{accountId}/images/
+   ```
+
+2. **建立图片语义索引**：从文件名提取关键词（这就是 Step 0.7 命名审计的价值）
+   ```
+   等离子喷嘴工作中-01.jpg  → 关键词: 等离子, 喷嘴, 工作
+   达因笔测试.jpg           → 关键词: 达因笔, 测试
+   contact-angle-test.jpg   → 关键词: 接触角, 测试
+   产品全家福.png           → 关键词: 产品, 全家福
+   ```
+
+3. **匹配规则**（按优先级）：
+   - **精确匹配**: segment 文案中包含图片文件名的核心关键词 → 直接使用
+   - **语义匹配**: segment 话题与图片描述有语义关联 → 选最相关的
+   - **补充获取**: 无匹配图片且话题需要配图 → 用 `fetch-images.mjs` 抓取
+   - **留空**: 该 segment 不需要配图（纯文字效果也很好）→ 不设 image 字段
+
+4. **分配原则**：
+   - 每张图只用一次（避免重复）
+   - 优先把最有视觉冲击力的图分配给 Hook 和 Climax 段
+   - 用户自有素材（accounts/）优先于抓取素材（output/）
+   - 如果可用图片不足，部分 segment 可以不配图
 
 ---
 
@@ -478,23 +577,61 @@ Step 5: "Result" — show it working, explain what just happened
 
 #### 4E: Narration Script
 
+图文解说是主打格式，重点优化完播率和收藏率。算法看：完播率 > 点赞 > 评论 > 转发。
+
 **Format specs:**
-- 4-8 segments, text <= 30 chars
-- Effects: `kenburns` `fadeIn` `zoomIn`
-- `image` field is optional: references filename in `accounts/{accountId}/images/`
-- Without images, narration renders with text-only animated backgrounds (still looks good)
-- Do NOT add a closing/follow segment (e.g., "关注XXX" or "点赞收藏"). End with the last content segment.
+- **5-7 segments**（超过7个掉播率明显上升）
+- text <= 30 chars（屏幕显示文字，配合画面）
+- narration 旁白每段 <= 50 字，每句推进信息，无废话
+- Effects: `kenburns`（照片首选）`zoomIn`（强调/震惊）`fadeIn`（平缓过渡）
+- `image` field 可选：引用 `output/{accountId}/images/` 中的文件名
+- 没有图片时，纯文字动态背景渲染，依然可用
+- 结尾**不加**"关注XXX/点赞收藏"等引导段，内容本身就是最好的留存
 
-**Narration structure:**
+---
+
+**HOOK 框架（前3秒决定80%留存率）**
+
+第一段必须是强钩子，选一种：
+
+| 类型 | 公式 | 示例 |
+|------|------|------|
+| 悬念型 | "XX竟然/居然..." | "这个模型，让OpenAI慌了" |
+| 数据炸弹 | 颠覆认知的数字 | "用了3天，省了30万" |
+| 好奇缺口 | "你不知道的XX" | "大家都错了，真相是..." |
+| 痛点直击 | 说出目标用户的痛 | "程序员最怕的事，发生了" |
+| 反常识 | 打破固有认知 | "越努力，越穷？有人验证了" |
+
+---
+
+**黄金结构：H-T-C-R（Hook→Tension→Climax→Resolution）**
+
 ```
-Seg 1: Hook — dramatic statement or question (text shown as title card)
-Seg 2-3: Setup — context and background, build the story
-Seg 4-5: Climax — key revelation, data bomb, or turning point
-Seg 6-7: Impact — what this means for the audience
-Seg 8: Takeaway — memorable one-liner conclusion
+Seg 1 [Hook]      强钩子 — 悬念/数据炸弹/反常识，前3秒留住人
+Seg 2 [Tension]   放大痛点或背景张力，"为什么你应该在意这件事"
+Seg 3-4 [Content] 核心内容逐步展开，每段埋一个小钩（让人看下一段）
+Seg 5 [Climax]    最大信息点 / 数据炸弹 / 转折，用 zoomIn 强调
+Seg 6 [Resolution]结论或行动意义，"所以这意味着什么"
+Seg 7 [槽点/留白] 埋一个引发评论的问题或争议，让人想发表意见（可选）
 ```
 
-**Writing tricks:** Each segment narration should work like a "chapter title" — short, punchy, visual. The voiceover does the heavy lifting. Use `kenburns` for photos, `zoomIn` for dramatic reveals, `fadeIn` for transitions.
+**节奏规则：每2-3段更新一次注意力**，用数字、转折词（"但是"、"没想到"、"关键来了"）或悬念续接（"而这只是开始..."）拉住观众。
+
+---
+
+**旁白写作规则：**
+
+- 每句话都要推进，没有铺垫废话
+- 开头禁用："今天给大家介绍..." / "首先我们来看..."
+- 用短句，不超过15字/句，语速快的地方用2-5字短句
+- 数字要具体：不说"很多"，说"87%"；不说"很快"，说"3天"
+- 在第2-3段嵌入**留存钩**："最关键的在后面" / "但你可能不知道的是..."
+- 槽点设置：留一个有争议或开放性的结论，引发"我有不同看法"型评论
+
+**Effect 选择逻辑：**
+- `kenburns` → 普通照片、人物、场景（给静图加动感）
+- `zoomIn` → 数据出现、关键转折、震惊时刻
+- `fadeIn` → 内容切换、段落过渡、结尾收束
 
 #### 4F: Article
 
@@ -552,6 +689,68 @@ ffmpeg -y -i {skillDir}/out/{accountId}-{format}.mp4 -i {skillDir}/out/{audioFil
 | ranking | generate-audio-ranking.py | ranking-audio.wav |
 | code | generate-audio-code.py | code-audio.wav |
 | narration | generate-audio-narration.py | narration-audio.wav |
+
+---
+
+### Step 6.5: Video Quality Spot-Check (渲染后质量抽查)
+
+渲染完成后，**必须**从最终视频中抽取关键帧进行视觉检查，确认无明显问题后再进入归档流程。
+
+**抽帧策略：**
+
+从视频中均匀抽取 5 帧（开头、1/4、1/2、3/4、结尾），覆盖整个时间线：
+
+```bash
+# 获取视频总时长
+duration=$(ffprobe -v error -show_entries format=duration -of csv=p=0 {video_path})
+
+# 抽取 5 个关键帧（开头3s、25%、50%、75%、结尾前3s）
+ffmpeg -ss 3 -i {video_path} -frames:v 1 -f image2 /tmp/vp-qc-01.jpg
+ffmpeg -ss $(echo "$duration * 0.25" | bc) -i {video_path} -frames:v 1 -f image2 /tmp/vp-qc-02.jpg
+ffmpeg -ss $(echo "$duration * 0.50" | bc) -i {video_path} -frames:v 1 -f image2 /tmp/vp-qc-03.jpg
+ffmpeg -ss $(echo "$duration * 0.75" | bc) -i {video_path} -frames:v 1 -f image2 /tmp/vp-qc-04.jpg
+ffmpeg -ss $(echo "$duration - 3" | bc) -i {video_path} -frames:v 1 -f image2 /tmp/vp-qc-05.jpg
+```
+
+**检查清单（逐帧视觉检查）：**
+
+| 检查项 | 通过标准 | 常见问题 |
+|--------|---------|---------|
+| 文字渲染 | 文字清晰可读，无溢出/截断 | 文案超长导致文字出框 |
+| 图片显示 | 图片完整显示，无拉伸/变形 | 图片比例不对，黑边 |
+| 角色形象 | 角色正常显示，表情匹配 | 透明背景未处理，角色缺失 |
+| 背景 | 背景完整覆盖画面 | 背景图尺寸不匹配 |
+| 布局 | 元素不重叠，间距合理 | 多个元素堆叠在一起 |
+| 动画/转场 | 帧间有变化，不是静止画面 | 渲染卡住导致静帧 |
+| 整体观感 | 画面干净专业 | 调试信息残留、颜色异常 |
+
+**读取帧图片进行视觉检查：**
+
+用 Read 工具直接读取抽取的 jpg 文件，Claude 会自动进行视觉分析。逐帧检查上述清单。
+
+**检查结果处理：**
+
+- **全部通过** → 删除临时帧文件，输出 "质量检查通过 ✓"，继续 Step 7
+- **发现问题** → 向用户报告：
+
+> 视频质量检查发现以下问题：
+>
+> | 帧位置 | 问题 | 严重程度 |
+> |--------|------|---------|
+> | 25% (第15秒) | 文字超出画面边界 | 高 |
+> | 50% (第30秒) | 图片显示为黑色 | 高 |
+> | 75% (第45秒) | 角色表情与文案不匹配 | 低 |
+>
+> 建议：
+> 1. [具体修复建议]
+> 2. 修复后重新渲染
+>
+> 是否需要我修复并重新渲染？
+
+**清理临时文件：**
+```bash
+rm -f /tmp/vp-qc-*.jpg
+```
 
 ---
 
@@ -623,6 +822,7 @@ export const registry = {
 - Composition IDs: `{accountId}-{format}`
 - TTS routing: `ACCOUNT={accountId}` env var
 - Config file: `vidpilot.json` in **project** directory (not skill directory)
-- Assets: `accounts/{id}/` in **project** directory (subdivided by type)
+- Static assets: `accounts/{id}/` in **project** directory (characters, backgrounds, images, text, video, music)
+- Per-episode assets: `output/{id}/images/` in **project** directory
 - Output: `output/{name}/` in **project** directory
 - Never mix data between accounts

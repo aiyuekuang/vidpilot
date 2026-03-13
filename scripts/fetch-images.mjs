@@ -8,8 +8,8 @@
  *   3. 下载到 engine/public/ 供 Remotion 使用
  *
  * 用法：
- *   node scripts/fetch-images.mjs --keywords "谷歌 Gemini AI" --count 6 --output engine/public/
- *   node scripts/fetch-images.mjs --from-hot --count 6     # 从热榜 top1 自动获取
+ *   node scripts/fetch-images.mjs --keywords "谷歌 Gemini AI" --count 6 --account laodong
+ *   node scripts/fetch-images.mjs --keywords "谷歌 Gemini AI" --count 6 --output /custom/path/
  */
 
 import fs from "fs";
@@ -20,7 +20,24 @@ import { Readable } from "stream";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SKILL_DIR = path.join(__dirname, "..");
-const DEFAULT_OUTPUT = path.join(SKILL_DIR, "engine", "public");
+
+function resolveOutputDir(args) {
+  const outputIdx = args.indexOf("--output");
+  if (outputIdx >= 0) return args[outputIdx + 1];
+
+  // Resolve from --account + VIDPILOT_PROJECT
+  const accountIdx = args.indexOf("--account");
+  const projectDir = process.env.VIDPILOT_PROJECT;
+  if (accountIdx >= 0 && projectDir) {
+    return path.join(projectDir, "output", args[accountIdx + 1], "images");
+  }
+  if (accountIdx >= 0) {
+    // Fallback: output relative to project CWD
+    return path.join(process.cwd(), "output", args[accountIdx + 1], "images");
+  }
+  // Last resort: engine/public (for backward compat)
+  return path.join(SKILL_DIR, "engine", "public");
+}
 
 async function downloadImage(url, outputPath) {
   try {
@@ -120,8 +137,7 @@ async function main() {
   const args = process.argv.slice(2);
   const countIdx = args.indexOf("--count");
   const count = countIdx >= 0 ? parseInt(args[countIdx + 1]) : 6;
-  const outputIdx = args.indexOf("--output");
-  const outputDir = outputIdx >= 0 ? args[outputIdx + 1] : DEFAULT_OUTPUT;
+  const outputDir = resolveOutputDir(args);
 
   let keywords = [];
   const kwIdx = args.indexOf("--keywords");

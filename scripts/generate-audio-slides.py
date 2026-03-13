@@ -92,9 +92,9 @@ def parse_slides_ts(filepath):
     """从 ai-slides.ts 提取旁白文本列表。"""
     with open(filepath, "r", encoding="utf-8") as f:
         content = f.read()
-    match = re.search(r"export const \w+Slides.*?=\s*\[(.*?)\];", content, re.DOTALL)
+    match = re.search(r"export const (?:\w+[Ss]lides|slides)\b.*?=\s*\[(.*?)\];", content, re.DOTALL)
     if not match:
-        raise ValueError(f"找不到 slides 数据（\w+Slides）in {filepath}")
+        raise ValueError(f"找不到 slides 数据（slides 或 *Slides）in {filepath}")
     slides = []
     for obj_match in re.finditer(
         r'\{[^{}]*?narration:\s*"([^"]*)"[^{}]*?duration:\s*(\d+)',

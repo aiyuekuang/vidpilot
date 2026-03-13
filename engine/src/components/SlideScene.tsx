@@ -66,7 +66,7 @@ const SingleSlide: React.FC<SingleSlideProps> = ({
   height,
 }) => {
   const accent = slide.accent || theme.accent;
-  const fs = isPortrait ? 1 : 0.7; // font scale
+  const fs = isPortrait ? 1.4 : 0.7; // font scale (1080x1920 needs larger text)
 
   // 入场动画：前 20 帧淡入+上移
   const enterProgress = spring({
@@ -88,19 +88,19 @@ const SingleSlide: React.FC<SingleSlideProps> = ({
   // ── COVER ─────────────────────────────────────────────────
   if (slide.layout === "cover") {
     return (
-      <div style={{ ...animStyle, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: "0 80px", textAlign: "center" }}>
+      <div style={{ ...animStyle, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: isPortrait ? "0 60px" : "0 80px", textAlign: "center" }}>
         {slide.emoji && (
-          <div style={{ fontSize: fs * 80, marginBottom: 24, lineHeight: 1 }}>{slide.emoji}</div>
+          <div style={{ fontSize: fs * 80, marginBottom: isPortrait ? 40 : 24, lineHeight: 1 }}>{slide.emoji}</div>
         )}
         <div style={{ fontSize: fs * 52, fontWeight: 800, color: theme.title, fontFamily, lineHeight: 1.3, marginBottom: 20 }}>
           {slide.title}
         </div>
         {slide.subtitle && (
-          <div style={{ fontSize: fs * 28, color: theme.body, fontFamily, lineHeight: 1.6, marginTop: 16, padding: "12px 32px", background: theme.card, borderRadius: 16, border: `1px solid ${theme.border}` }}>
+          <div style={{ fontSize: fs * 28, color: theme.body, fontFamily, lineHeight: 1.6, marginTop: isPortrait ? 28 : 16, padding: isPortrait ? "18px 40px" : "12px 32px", background: theme.card, borderRadius: 16, border: `1px solid ${theme.border}` }}>
             {slide.subtitle}
           </div>
         )}
-        <div style={{ marginTop: 48, width: 60, height: 4, background: accent, borderRadius: 2 }} />
+        <div style={{ marginTop: isPortrait ? 60 : 48, width: 60, height: 4, background: accent, borderRadius: 2 }} />
       </div>
     );
   }
@@ -110,20 +110,20 @@ const SingleSlide: React.FC<SingleSlideProps> = ({
     const statProgress = spring({ frame: Math.max(0, globalFrame - 10), fps: 30, config: { damping: 14, stiffness: 100 }, durationInFrames: 25 });
     const statScale = interpolate(statProgress, [0, 1], [0.4, 1]);
     return (
-      <div style={{ ...animStyle, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: "0 60px", textAlign: "center" }}>
-        <div style={{ fontSize: fs * 32, fontWeight: 700, color: theme.body, fontFamily, marginBottom: 40 }}>{slide.title}</div>
+      <div style={{ ...animStyle, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: isPortrait ? "0 56px" : "0 60px", textAlign: "center" }}>
+        <div style={{ fontSize: fs * 32, fontWeight: 700, color: theme.body, fontFamily, marginBottom: isPortrait ? 60 : 40 }}>{slide.title}</div>
         <div style={{ transform: `scale(${statScale})`, display: "inline-block" }}>
           <div style={{ fontSize: fs * 120, fontWeight: 900, color: accent, fontFamily, lineHeight: 1, textShadow: `0 0 60px ${slide.accent || theme.accentGlow}` }}>
             {slide.stat}
           </div>
         </div>
         {slide.statLabel && (
-          <div style={{ fontSize: fs * 26, color: theme.muted, fontFamily, marginTop: 20, lineHeight: 1.5 }}>{slide.statLabel}</div>
+          <div style={{ fontSize: fs * 26, color: theme.muted, fontFamily, marginTop: isPortrait ? 32 : 20, lineHeight: 1.5 }}>{slide.statLabel}</div>
         )}
         {slide.points && slide.points.length > 0 && (
-          <div style={{ marginTop: 40, display: "flex", flexDirection: "column", gap: 12, width: "100%", maxWidth: 700 }}>
+          <div style={{ marginTop: isPortrait ? 64 : 40, display: "flex", flexDirection: "column", gap: isPortrait ? 20 : 12, width: "100%", maxWidth: isPortrait ? "100%" : 700 }}>
             {slide.points.map((p, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 12, background: theme.card, borderRadius: 12, padding: "14px 20px", border: `1px solid ${theme.border}`, textAlign: "left" }}>
+              <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: isPortrait ? 16 : 12, background: theme.card, borderRadius: isPortrait ? 16 : 12, padding: isPortrait ? "20px 28px" : "14px 20px", border: `1px solid ${theme.border}`, textAlign: "left" }}>
                 <span style={{ color: accent, fontSize: fs * 20, marginTop: 2 }}>•</span>
                 <span style={{ color: theme.body, fontSize: fs * 22, fontFamily, lineHeight: 1.5 }}>{p}</span>
               </div>
@@ -153,19 +153,16 @@ const SingleSlide: React.FC<SingleSlideProps> = ({
   // ── END ───────────────────────────────────────────────────
   if (slide.layout === "end") {
     return (
-      <div style={{ ...animStyle, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: "0 80px", textAlign: "center" }}>
-        {slide.emoji && <div style={{ fontSize: fs * 72, marginBottom: 24 }}>{slide.emoji}</div>}
-        <div style={{ fontSize: fs * 44, fontWeight: 800, color: theme.title, fontFamily, lineHeight: 1.4, marginBottom: 24 }}>
+      <div style={{ ...animStyle, display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", height: "100%", padding: isPortrait ? "0 60px" : "0 80px", textAlign: "center" }}>
+        {slide.emoji && <div style={{ fontSize: fs * 72, marginBottom: isPortrait ? 40 : 24 }}>{slide.emoji}</div>}
+        <div style={{ fontSize: fs * 44, fontWeight: 800, color: theme.title, fontFamily, lineHeight: 1.4, marginBottom: isPortrait ? 36 : 24 }}>
           {slide.title}
         </div>
         {slide.subtitle && (
-          <div style={{ fontSize: fs * 28, color: accent, fontFamily, fontWeight: 600, marginBottom: 40, padding: "16px 40px", border: `2px solid ${accent}`, borderRadius: 50 }}>
+          <div style={{ fontSize: fs * 28, color: accent, fontFamily, fontWeight: 600, marginBottom: isPortrait ? 56 : 40, padding: isPortrait ? "22px 48px" : "16px 40px", border: `2px solid ${accent}`, borderRadius: 50 }}>
             {slide.subtitle}
           </div>
         )}
-        <div style={{ fontSize: fs * 22, color: theme.muted, fontFamily }}>
-          @程序员老东 · 关注不迷路
-        </div>
       </div>
     );
   }
@@ -191,22 +188,22 @@ const SingleSlide: React.FC<SingleSlideProps> = ({
 
   // ── CONTENT (default) ─────────────────────────────────────
   return (
-    <div style={{ ...animStyle, display: "flex", flexDirection: "column", height: "100%", padding: isPortrait ? "60px 48px" : "40px 60px" }}>
-      <div style={{ fontSize: fs * 38, fontWeight: 800, color: theme.title, fontFamily, marginBottom: 8, lineHeight: 1.3 }}>
+    <div style={{ ...animStyle, display: "flex", flexDirection: "column", justifyContent: "center", height: "100%", padding: isPortrait ? "0 56px" : "40px 60px" }}>
+      <div style={{ fontSize: fs * 38, fontWeight: 800, color: theme.title, fontFamily, marginBottom: isPortrait ? 16 : 8, lineHeight: 1.3 }}>
         {slide.emoji ? `${slide.emoji} ${slide.title}` : slide.title}
       </div>
       {slide.subtitle && (
-        <div style={{ fontSize: fs * 22, color: theme.muted, fontFamily, marginBottom: 28 }}>{slide.subtitle}</div>
+        <div style={{ fontSize: fs * 22, color: theme.muted, fontFamily, marginBottom: isPortrait ? 36 : 28 }}>{slide.subtitle}</div>
       )}
-      <div style={{ width: 48, height: 4, background: accent, borderRadius: 2, marginBottom: 36 }} />
-      <div style={{ flex: 1, display: "flex", flexDirection: "column", gap: 18, justifyContent: "center" }}>
+      <div style={{ width: 48, height: 4, background: accent, borderRadius: 2, marginBottom: isPortrait ? 56 : 36 }} />
+      <div style={{ display: "flex", flexDirection: "column", gap: isPortrait ? 28 : 18 }}>
         {(slide.points || []).map((point, i) => {
           const pointDelay = 10 + i * 8;
           const pointOpacity = interpolate(globalFrame, [pointDelay, pointDelay + 10], [0, 1], { extrapolateRight: "clamp", extrapolateLeft: "clamp" });
           const pointX = interpolate(globalFrame, [pointDelay, pointDelay + 10], [-20, 0], { extrapolateRight: "clamp", extrapolateLeft: "clamp" });
           return (
-            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: 16, opacity: pointOpacity, transform: `translateX(${pointX}px)` }}>
-              <div style={{ width: 8, height: 8, borderRadius: "50%", background: accent, flexShrink: 0, marginTop: fs * 14, boxShadow: `0 0 8px ${accent}` }} />
+            <div key={i} style={{ display: "flex", alignItems: "flex-start", gap: isPortrait ? 20 : 16, opacity: pointOpacity, transform: `translateX(${pointX}px)` }}>
+              <div style={{ width: isPortrait ? 10 : 8, height: isPortrait ? 10 : 8, borderRadius: "50%", background: accent, flexShrink: 0, marginTop: fs * 14, boxShadow: `0 0 8px ${accent}` }} />
               <div style={{ fontSize: fs * 26, color: theme.body, fontFamily, lineHeight: 1.65 }}>{point}</div>
             </div>
           );

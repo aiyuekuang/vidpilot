@@ -9,7 +9,7 @@
  *   - filenames use convention: {format}.ts
  *   - character images in accounts/{id}/characters/
  *   - background images in accounts/{id}/backgrounds/
- *   - narration images in accounts/{id}/images/
+ *   - per-episode images in output/{id}/images/ (generated assets)
  *
  * Usage:
  *   node scripts/setup-accounts.mjs /path/to/project
@@ -46,8 +46,8 @@ if (accounts.length === 0) {
   process.exit(0);
 }
 
-// Asset subdirectories under accounts/{id}/
-const ASSET_SUBDIRS = ["characters", "backgrounds", "images"];
+// Asset subdirectories under accounts/{id}/ (user-provided static assets only)
+const ASSET_SUBDIRS = ["characters", "backgrounds"];
 
 // Convention-based format → filename
 const FORMAT_FILENAME = (format) => `${format}.ts`;
@@ -103,8 +103,22 @@ for (const acct of accounts) {
     }
   }
 
-  // Sync all images from images/ subdirectory (for narration segments)
-  const imagesDir = join(assetsDir, "images");
+  // Sync user-provided images from accounts/{id}/images/ (product photos, etc.)
+  const userImagesDir = join(assetsDir, "images");
+  if (existsSync(userImagesDir)) {
+    const userImageFiles = readdirSync(userImagesDir).filter(f =>
+      /\.(png|jpe?g|webp|gif|svg)$/i.test(f)
+    );
+    for (const img of userImageFiles) {
+      copyFileSync(join(userImagesDir, img), join(ENGINE_PUBLIC, img));
+    }
+    if (userImageFiles.length > 0) {
+      console.log(`[ok] Synced: accounts/${id}/images/ (${userImageFiles.length} files) → engine/public/`);
+    }
+  }
+
+  // Sync per-episode images from output/{id}/images/ (generated/fetched assets)
+  const imagesDir = join(PROJECT_DIR, "output", id, "images");
   if (existsSync(imagesDir)) {
     const imageFiles = readdirSync(imagesDir).filter(f =>
       /\.(png|jpe?g|webp|gif|svg)$/i.test(f)
@@ -115,7 +129,7 @@ for (const acct of accounts) {
       copyFileSync(src, dest);
     }
     if (imageFiles.length > 0) {
-      console.log(`[ok] Synced: accounts/${id}/images/ (${imageFiles.length} files) → engine/public/`);
+      console.log(`[ok] Synced: output/${id}/images/ (${imageFiles.length} files) → engine/public/`);
     }
   }
 
