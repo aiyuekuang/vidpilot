@@ -5,11 +5,14 @@
  * 策略：
  *   1. 优先用新闻源自带的 cover 图（36kr, ithome 等）
  *   2. 补充用 Bing Image Search 抓取（无需 API key）
- *   3. 下载到 engine/public/ 供 Remotion 使用
+ *   3. 下载到 output/{accountId}/images/ 供脚本生成使用
  *
- * 用法：
+ * 用法（整体模式）：
  *   node scripts/fetch-images.mjs --keywords "谷歌 Gemini AI" --count 6 --account laodong
  *   node scripts/fetch-images.mjs --keywords "谷歌 Gemini AI" --count 6 --output /custom/path/
+ *
+ * 用法（per-segment 模式）：每段关键词用 | 分隔，每段搜一张图，文件名取第一个关键词
+ *   node scripts/fetch-images.mjs --per-segment "新能源汽车电池|等离子清洗工艺|胶接失效原因|指示卡变色" --account plasmalab
  */
 
 import fs from "fs";
@@ -133,11 +136,68 @@ async function fetchFromBing(query, count) {
   return images;
 }
 
+// Fetch one image for a single query, try hot lists first then Bing
+async function fetchOneImage(query, outputDir, filenameBase) {
+  const kws = query.split(/[\s,]+/).filter(Boolean);
+
+  // Try hot list covers first
+  const hotCovers = await fetchCoversFromHotList(kws, 3);
+  let candidates = hotCovers;
+
+  // Fall back to Bing
+  if (candidates.length === 0) {
+    candidates = await fetchFromBing(query, 5);
+  }
+
+  for (const img of candidates) {
+    const ext = img.url.match(/\.(jpg|jpeg|png|webp)/i)?.[1] || "jpg";
+    const filename = `${filenameBase}.${ext}`;
+    const filepath = path.join(outputDir, filename);
+    console.error(`[info] Downloading: ${img.url.slice(0, 60)}...`);
+    const ok = await downloadImage(img.url, filepath);
+    if (ok) {
+      console.error(`  [+] Saved: ${filename}`);
+      return { filename, title: img.title, source: img.source };
+    }
+  }
+  console.error(`  [-] No image found for: ${query}`);
+  return null;
+}
+
+// Convert a Chinese/English phrase to a safe filename slug
+function toSlug(str) {
+  return str.trim()
+    .replace(/[^\u4e00-\u9fa5a-zA-Z0-9]/g, "-")
+    .replace(/-+/g, "-")
+    .replace(/^-|-$/g, "")
+    .slice(0, 30);
+}
+
 async function main() {
   const args = process.argv.slice(2);
+  const outputDir = resolveOutputDir(args);
+  fs.mkdirSync(outputDir, { recursive: true });
+
+  // --per-segment mode: each segment keyword separated by |
+  const psIdx = args.indexOf("--per-segment");
+  if (psIdx >= 0) {
+    const segments = args[psIdx + 1].split("|").map((s) => s.trim()).filter(Boolean);
+    console.error(`[info] Per-segment mode: ${segments.length} segments`);
+    const downloaded = [];
+    for (let i = 0; i < segments.length; i++) {
+      const query = segments[i];
+      const slug = toSlug(query) || `seg-${i + 1}`;
+      console.error(`[info] Segment ${i + 1}/${segments.length}: "${query}"`);
+      const result = await fetchOneImage(query, outputDir, slug);
+      if (result) downloaded.push({ segment: i + 1, query, ...result });
+    }
+    console.log(JSON.stringify({ count: downloaded.length, mode: "per-segment", images: downloaded }, null, 2));
+    return;
+  }
+
+  // --keywords mode (original bulk mode)
   const countIdx = args.indexOf("--count");
   const count = countIdx >= 0 ? parseInt(args[countIdx + 1]) : 6;
-  const outputDir = resolveOutputDir(args);
 
   let keywords = [];
   const kwIdx = args.indexOf("--keywords");
@@ -146,13 +206,13 @@ async function main() {
   }
 
   if (keywords.length === 0) {
-    console.error("Usage: node fetch-images.mjs --keywords 'AI Gemini 谷歌' --count 6");
+    console.error("Usage:");
+    console.error("  node fetch-images.mjs --keywords 'AI Gemini 谷歌' --count 6 --account laodong");
+    console.error("  node fetch-images.mjs --per-segment '新能源汽车电池|等离子清洗工艺|胶接失效|指示卡变色' --account plasmalab");
     process.exit(1);
   }
 
-  fs.mkdirSync(outputDir, { recursive: true });
-
-  console.error(`[info] Fetching images for: ${keywords.join(", ")}`);
+  console.error(`[info] Bulk mode: fetching ${count} images for: ${keywords.join(", ")}`);
 
   // 1. Try covers from hot list (higher quality, related content)
   const hotCovers = await fetchCoversFromHotList(keywords, count);
@@ -184,14 +244,7 @@ async function main() {
     }
   }
 
-  // Output result as JSON
-  console.log(
-    JSON.stringify({
-      count: downloaded.length,
-      keywords,
-      images: downloaded,
-    }, null, 2)
-  );
+  console.log(JSON.stringify({ count: downloaded.length, mode: "bulk", keywords, images: downloaded }, null, 2));
 }
 
 main().catch((e) => {

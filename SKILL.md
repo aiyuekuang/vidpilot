@@ -181,21 +181,56 @@ node {skillDir}/scripts/setup-accounts.mjs {CWD}
 
 **Do NOT proceed with dialogue/narration video if critical assets are missing.** Slides, ranking, and code formats can proceed without any images.
 
-### 0.5 Narration Format: Per-Video Image Check
+### 0.5 Narration Format: Pre-Fetch Images BEFORE Writing Script
 
-When the selected format is **narration** and the script references images (`segment.image`):
+**IMPORTANT: For narration format, fetch topic-specific images BEFORE generating the script.** This ensures the script can reference real images that match each segment, rather than falling back to mismatched local assets.
 
-1. Check if referenced images exist in `output/{accountId}/images/`
-2. If missing, tell user:
+**Step 1 — Decide segment topics (sketch only, no full script yet)**
 
-> This narration script references images that aren't in `output/{accountId}/images/` yet:
-> - `{filename1}` — for segment "{segment text}"
-> - `{filename2}` — for segment "{segment text}"
->
-> Options:
-> 1. Add the images to `output/{accountId}/images/` and tell me when ready
-> 2. I can generate the script without images (text-only narration, still looks good)
-> 3. I can use AI to generate placeholder images (requires image generation tool)
+Before fetching, decide the 5-7 narrative beats for the video. For each beat, write a 3-6 word image search query.
+
+**Step 2 — Fetch per-segment images using `--per-segment` mode**
+
+```bash
+VIDPILOT_PROJECT={projectDir} node {skillDir}/scripts/fetch-images.mjs \
+  --per-segment "beat1关键词|beat2关键词|beat3关键词|beat4关键词|beat5关键词" \
+  --account {accountId}
+```
+
+This downloads one image per segment into `output/{accountId}/images/`, named by the search query (e.g., `新能源汽车电池起火.jpg`). These semantic filenames enable accurate image matching in Step 4.
+
+**Step 3 — Visually inspect downloaded images**
+
+Read each downloaded image file to check:
+- Is the image on-topic and relevant?
+- Any competitor brand logos or watermarks that would be a problem?
+- Portrait/landscape — landscape images display fine in the narration layout
+
+Replace any unsuitable images manually or re-run with refined keywords.
+
+**Step 4 — Run `setup-accounts.mjs` to sync to engine/public**
+
+```bash
+node {skillDir}/scripts/setup-accounts.mjs {projectDir}
+```
+
+**Step 5 — NOW write the script**, referencing the fetched image filenames in each segment's `image` field.
+
+---
+
+**Hot news API vs Bing by account type:**
+
+| Account type | Primary image source | Reason |
+|---|---|---|
+| IT/AI/tech (laodong) | Hot list covers (36kr, ithome) | Topics appear in tech news feeds |
+| Industrial/B2B (plasmalab) | Bing only | Industrial topics don't appear in IT news hot lists |
+| Stock/finance (stock) | Hot list covers (eastmoney) | Financial news has good cover images |
+
+For industrial accounts, the hot list will return 0 results — Bing is the only source. Use specific Chinese keywords for better Bing results (e.g., `"等离子清洗汽车电池"` beats `"plasma cleaning"`).
+
+---
+
+**If images are already fetched** (from a previous run or manually placed), skip to Step 4 and proceed to script writing.
 
 ### 0.6 Adding a New Account to Existing Project
 
