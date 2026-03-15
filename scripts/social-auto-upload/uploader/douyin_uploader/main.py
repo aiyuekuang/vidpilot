@@ -142,6 +142,7 @@ class DouYinVideo(object):
         # 检查是否存在包含输入框的元素
         # 这里为了避免页面变化，故使用相对位置定位：作品标题父级右侧第一个元素的input子元素
         await asyncio.sleep(1)
+        await self.dismiss_guide_dialog(page)
         douyin_logger.info(f'  [-] 正在填充标题和话题...')
         title_container = page.get_by_text('作品标题').locator("..").locator("xpath=following-sibling::div[1]").locator("input")
         if await title_container.count():
@@ -268,24 +269,39 @@ class DouYinVideo(object):
 
         return False
 
+    async def dismiss_guide_dialog(self, page: Page):
+        """关闭抖音创作者中心的引导弹窗（如果存在）"""
+        try:
+            guide_btn = page.locator('button:has-text("我知道了")')
+            while await guide_btn.first.is_visible(timeout=1000):
+                await guide_btn.first.click()
+                await asyncio.sleep(0.5)
+        except:
+            pass
+
     async def set_thumbnail(self, page: Page, thumbnail_path: str):
         if thumbnail_path:
             douyin_logger.info('  [-] 正在设置视频封面...')
-            await page.click('text="选择封面"')
-            await page.wait_for_selector("div.dy-creator-content-modal")
-            await page.click('text="设置竖封面"')
-            await page.wait_for_timeout(2000)  # 等待2秒
-            # 定位到上传区域并点击
+            await self.dismiss_guide_dialog(page)
+            # 用 JS 点击"选择封面"，绕过浮层遮挡
+            cover_btn = page.locator('text="选择封面"').first
+            await cover_btn.scroll_into_view_if_needed()
+            await asyncio.sleep(0.5)
+            await cover_btn.evaluate("el => el.click()")
+            # 等待封面弹窗出现 — 直接等"设置竖封面"文本可见
+            v_cover = page.get_by_text("设置竖封面")
+            await v_cover.wait_for(state="visible", timeout=10000)
+            await v_cover.click()
+            await page.wait_for_timeout(2000)
+            # 上传封面图
             await page.locator("div[class^='semi-upload upload'] >> input.semi-upload-hidden-input").set_input_files(thumbnail_path)
-            await page.wait_for_timeout(2000)  # 等待2秒
-            await page.locator("div#tooltip-container button:visible:has-text('完成')").click()
-            # finish_confirm_element = page.locator("div[class^='confirmBtn'] >> div:has-text('完成')")
-            # if await finish_confirm_element.count():
-            #     await finish_confirm_element.click()
-            # await page.locator("div[class^='footer'] button:has-text('完成')").click()
+            await page.wait_for_timeout(2000)
+            # 点击完成
+            finish_btn = page.locator("button:visible:has-text('完成')")
+            if await finish_btn.count():
+                await finish_btn.first.click()
             douyin_logger.info('  [+] 视频封面设置完成！')
-            # 等待封面设置对话框关闭
-            await page.wait_for_selector("div.extractFooter", state='detached')
+            await page.wait_for_timeout(2000)
             
 
     async def set_location(self, page: Page, location: str = ""):

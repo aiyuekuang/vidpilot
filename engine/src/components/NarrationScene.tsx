@@ -5,6 +5,7 @@ import {
   interpolate,
   spring,
   Img,
+  OffthreadVideo,
   Audio,
   Sequence,
   staticFile,
@@ -122,7 +123,8 @@ const SingleSegment: React.FC<SingleSegmentProps> = ({
   totalSegments,
 }) => {
   const fontFamily = "PingFang SC, Noto Sans SC, Microsoft YaHei, sans-serif";
-  const hasImage = !!segment.image;
+  const hasVideo = !!segment.video;
+  const hasMedia = hasVideo || !!segment.image;
   const isFirst = segmentIndex === 0;
   const isLast = segmentIndex === totalSegments - 1;
 
@@ -212,7 +214,7 @@ const SingleSegment: React.FC<SingleSegmentProps> = ({
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: hasImage ? "flex-start" : "center",
+        justifyContent: hasMedia ? "flex-start" : "center",
         overflow: "hidden",
       }}
     >
@@ -239,7 +241,7 @@ const SingleSegment: React.FC<SingleSegmentProps> = ({
           display: "flex",
           flexDirection: "column",
           alignItems: "center",
-          paddingTop: hasImage
+          paddingTop: hasMedia
             ? isPortrait ? 140 : 80
             : isPortrait ? 400 : 250,
           paddingLeft: isPortrait ? 48 : 60,
@@ -317,8 +319,8 @@ const SingleSegment: React.FC<SingleSegmentProps> = ({
         )}
       </div>
 
-      {/* Image card (middle area) */}
-      {hasImage && (
+      {/* Media card (middle area) - image or video */}
+      {hasMedia && (
         <div
           style={{
             position: "absolute",
@@ -334,16 +336,28 @@ const SingleSegment: React.FC<SingleSegmentProps> = ({
             boxShadow: `0 20px 60px rgba(0,0,0,0.5), 0 0 40px ${theme.accent}10`,
           }}
         >
-          <Img
-            src={staticFile(segment.image!)}
-            style={{
-              width: "100%",
-              height: "100%",
-              objectFit: "cover",
-              transform: `scale(${imgScale})`,
-            }}
-          />
-          {/* Subtle gradient overlay on image */}
+          {hasVideo ? (
+            <OffthreadVideo
+              src={staticFile(segment.video!)}
+              volume={0}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+            />
+          ) : (
+            <Img
+              src={staticFile(segment.image!)}
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+                transform: `scale(${imgScale})`,
+              }}
+            />
+          )}
+          {/* Subtle gradient overlay */}
           <div
             style={{
               position: "absolute",

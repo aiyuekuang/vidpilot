@@ -133,6 +133,20 @@ for (const acct of accounts) {
     }
   }
 
+  // Sync video files from accounts/{id}/video/ → engine/public/
+  const videoDir = join(assetsDir, "video");
+  if (existsSync(videoDir)) {
+    const videoFiles = readdirSync(videoDir).filter(f =>
+      /\.(mp4|mov|webm)$/i.test(f)
+    );
+    for (const v of videoFiles) {
+      copyFileSync(join(videoDir, v), join(ENGINE_PUBLIC, v));
+    }
+    if (videoFiles.length > 0) {
+      console.log(`[ok] Synced: accounts/${id}/video/ (${videoFiles.length} files) → engine/public/`);
+    }
+  }
+
   // Sync music files from music/ subdirectory (for BGM)
   const musicDir = join(assetsDir, "music");
   if (existsSync(musicDir)) {

@@ -115,11 +115,12 @@ export interface CodeDemoProps {
 
 export interface NarrationSegment {
   image?: string;             // 图片文件名（public/ 下），可选
+  video?: string;             // 视频文件名（public/ 下），可选，优先于 image
   text: string;               // 画面文字，用 **关键词** 标记高亮
   subtitle?: string;          // 副标题/来源
   narration: string;          // 旁白文本
   duration: number;           // 帧数
-  effect?: "kenburns" | "fadeIn" | "zoomIn";  // 图片动效
+  effect?: "kenburns" | "fadeIn" | "zoomIn";  // 图片/视频动效
 }
 
 export interface NarrationProps {
