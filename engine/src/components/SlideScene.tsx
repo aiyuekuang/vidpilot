@@ -280,6 +280,15 @@ export const SlideScene: React.FC<SlideshowProps> = ({
         )}
       </div>
 
+      {/* 字幕 */}
+      {currentSlide && currentSlide.narration && (
+        <div style={{ position: "absolute", bottom: isPortrait ? 160 : 80, left: isPortrait ? 32 : 40, right: isPortrait ? 32 : 40, display: "flex", justifyContent: "center", zIndex: 20 }}>
+          <div style={{ background: "rgba(0,0,0,0.7)", padding: isPortrait ? "16px 28px" : "10px 20px", borderRadius: 12, color: "#ffffff", fontSize: isPortrait ? 28 : 18, fontFamily: "PingFang SC, Noto Sans SC, Microsoft YaHei, sans-serif", lineHeight: 1.6, textAlign: "center", maxWidth: "100%", opacity: interpolate(localFrame, [0, 8], [0, 1], { extrapolateRight: "clamp" }) }}>
+            {currentSlide.narration}
+          </div>
+        </div>
+      )}
+
       {/* 页码指示器 */}
       <div style={{ position: "absolute", bottom: isPortrait ? 28 : 14, left: 0, right: 0, display: "flex", justifyContent: "center", gap: 8, zIndex: 20 }}>
         {slides.map((_, i) => (
